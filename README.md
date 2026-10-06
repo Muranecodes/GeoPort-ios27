@@ -71,7 +71,8 @@ An iOS device and a sense of adventure!
 You will need to install iTunes (we need their USB service so we can discover the iOS device!)
 
 ## Installation
-
+- 2026.10.6 IOS27 version still testing
+  you can download the repo and execution start-geoport.ps1 on windows 
 - [Download](https://github.com/davesc63/GeoPort/releases/) the package for your operating system
 - Run the application
 - Explore the world and **Simulate Location**
