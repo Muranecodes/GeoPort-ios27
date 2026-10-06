@@ -112,9 +112,8 @@ pair_record = None
 error_message = None
 sudo_message = ""
 captured_output = None
-GITHUB_REPO = 'davesc63/GeoPort'
+GITHUB_REPO = 'Muranecodes/GeoPort-ios27'
 CURRENT_VERSION_FILE = 'CURRENT_VERSION'
-BROADCAST_FILE = 'BROADCAST'
 APP_VERSION_NUMBER = "2.3.3"
 APP_VERSION_TYPE = "fuel"
 terminate_tunnel_thread = False
@@ -426,7 +425,7 @@ def get_devices_with_retry(max_attempts=10):
         except Exception as e:
             logger.warning(f"Attempt {attempt}: Error occurred - {e}")
         time.sleep(1)  # Add a delay between attempts if needed
-    raise RuntimeError("No devices found after multiple attempts.\n Ensure you are running GeoPort as sudo / Administrator \n Please see the FAQ: https://github.com/davesc63/GeoPort/blob/main/FAQ.md \n If you still have the error please raise an issue on github: https://github.com/davesc63/GeoPort/issues ")
+    raise RuntimeError("No devices found after multiple attempts.\n Ensure you are running GeoPort as sudo / Administrator")
 
 
 def get_wifi_with_retry(max_attempts=10):
@@ -1204,25 +1203,6 @@ def get_github_version():
         return None
 
 
-def get_github_broadcast():
-    try:
-        # Make a request to the GitHub API to get the content of CURRENT_VERSION file
-        url = f'https://raw.githubusercontent.com/{GITHUB_REPO}/main/{BROADCAST_FILE}'
-        logger.error(f"Github URL: {url}")
-
-        response = requests.get(url, verify=False)
-        logger.error(f"github response: {response}")
-        #response.raise_for_status()
-
-        # Parse the content of the file
-        github_broadcast = response.text.strip()
-        logger.error(f"GITHUB BROADCAST MESSAGE:")
-
-        return github_broadcast
-    except requests.RequestException as e:
-
-        return None
-
 
 def remove_ansi_escape_codes(text):
     ansi_escape = re.compile(r'\x1b[^m]*m')
@@ -1442,7 +1422,6 @@ def index():
     fetch_api_data(api_url)
     # Get the GitHub version
     github_version = get_github_version()
-    github_broadcast = get_github_broadcast()
     user_locale = get_user_country()
     logger.info(f"Country: {user_locale}")
     logger.info(f"Current platform: {platform}")
@@ -1461,7 +1440,7 @@ def index():
     else:
         version_message = None
 
-    return render_template('map.html', version_message=version_message, github_broadcast=github_broadcast,
+    return render_template('map.html', version_message=version_message,
                            user_locale=user_locale, app_version_num=APP_VERSION_NUMBER,
                            app_version_type=APP_VERSION_TYPE, error_message=error_message, current_platform=platform,
                            sudo_message=sudo_message)

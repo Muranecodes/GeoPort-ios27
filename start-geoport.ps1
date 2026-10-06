@@ -18,9 +18,23 @@ if (-not $isAdmin) {
 
 $legacyPython = Join-Path $root '.venv-legacy\Scripts\python.exe'
 $modernPython = Join-Path $root '.venv-modern\Scripts\python.exe'
-foreach ($p in $legacyPython, $modernPython) {
-    if (-not (Test-Path $p)) { throw "Missing $p - run the setup steps in the walkthrough first." }
+
+# Create the virtual environments from the requirements files on first run.
+function New-GeoPortEnv($name, $python, $requirements) {
+    if (Test-Path $python) { return }
+    Write-Host "Creating $name from $requirements ..."
+    $venvDir = Join-Path $root $name
+    if (Get-Command uv -ErrorAction SilentlyContinue) {
+        uv venv $venvDir --python 3.12
+        uv pip install -p $python -r (Join-Path $root $requirements)
+    } else {
+        python -m venv $venvDir
+        & $python -m pip install -r (Join-Path $root $requirements)
+    }
+    if (-not (Test-Path $python)) { throw "Failed to create $name" }
 }
+New-GeoPortEnv '.venv-legacy' $legacyPython 'requirements-legacy.txt'
+New-GeoPortEnv '.venv-modern' $modernPython 'requirements-modern.txt'
 
 $env:GEOPORT_MODERN_PMD3_PYTHON = $modernPython
 Set-Location (Join-Path $root 'src')

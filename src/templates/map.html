@@ -243,12 +243,6 @@ body.dark-mode .modal-footer button {
         </div>
     {% endif %}
 
-  {% if github_broadcast %}
-    <div class="alert alert-info" role="alert">
-        {{ github_broadcast }}
-    </div>
-    {% endif %}
-
 {% if timeout_message %}
         <div class="alert alert-warning" role="alert">
             {{ timeout_message }}
@@ -523,33 +517,6 @@ L.leafletMenu = function(a, b) {
     console.log("App Version: ", appVersionNum);
     console.log("App Type: ", appVersionType);
     console.log("Platform: ", selectedDevicePlatform);
-
-      // Record app_visit when the page loads
-      //document.addEventListener('DOMContentLoaded', () => recordEvent('beta_visit'));
-
-      async function recordEvent(eventName) {
-        const apiUrl = 'https://api.geoport.me/';
-
-        try {
-          const response = await fetch(apiUrl + selectedDevicePlatform, {
-            mode: 'no-cors',
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              path: window.location.pathname,
-              [eventName]: true,
-            }),
-          });
-
-          if (!response.ok) {
-            console.error('Failed to record event:', response.status, response.statusText);
-          }
-        } catch (error) {
-          console.error('Error recording event:', error.message);
-        }
-      }
 
     // Function to toggle Dark Mode
     function toggleDarkMode() {
@@ -1888,45 +1855,6 @@ function populateDeviceList() {
         }
     }
 
-    // Define an asynchronous function to update DynamoDB
-    async function updateDynamoDB(selectedDeviceIdentifier, selectedDeviceVersion, selectedDeviceName, selectedDeviceClass, selectedDevicePlatform, appVersionNum, appType, selectedDeviceConnType, SelectedDeviceWifiState, selectedDeviceCountry) {
-
-        const apiUrl = 'https://api.geoport.me/';
-
-        try {
-            const response = await fetch(apiUrl + selectedDeviceIdentifier, {
-                mode: 'no-cors',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    // Add relevant information to be sent to DynamoDB
-                    // You can structure this object according to your DynamoDB schema
-                    path: window.location.pathname,
-                    version: selectedDeviceVersion,
-                    deviceName: selectedDeviceName,
-                    deviceClass: selectedDeviceClass,
-                    platform: selectedDevicePlatform,
-                    appType: appType,
-                    appVersion: appVersionNum,
-                    connType: selectedDeviceConnType,
-                    wifiState: SelectedDeviceWifiState,
-                    country: selectedDeviceCountry,
-
-
-
-                }),
-            });
-
-            if (!response.ok) {
-
-            }
-        } catch (error) {
-
-        }
-    }
-
 
 
 
@@ -1978,9 +1906,6 @@ function connectDevice() {
 <!--    console.log('App Version:', appVersionNum);-->
 <!--    console.log('wifi address:', selectedDeviceWifiAddress);-->
 
-
-    // Call the function to update DynamoDB
-    updateDynamoDB(selectedDeviceIdentifier, selectedDeviceVersion, selectedDeviceName, selectedDeviceClass, selectedDevicePlatform, appVersionNum, appType, selectedDeviceConnType, SelectedDeviceWifiState, selectedDeviceCountry);
 
     if (connectTextElement) {
         connectTextElement.innerText = "Connecting, please wait...";
@@ -2573,16 +2498,7 @@ function continueAfterDeveloperModeRequired() {
         </div>
     </div>
 
-    <!-- Centered Buy Me A Coffee button -->
-    <div class="row justify-content-center">
-        <div class="col-6 text-center"> <!-- Adjust the column size and add text-center class -->
-            <!-- Your Buy Me A Coffee button code -->
-            <p></p>
-            <a href="https://www.buymeacoffee.com/davesc63">
-                <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=🍺&slug=davesc63&button_colour=FFDD00&font_colour=000000&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer">
-            </a>
-        </div>
-    </div>
+    <!-- TODO: add your own donate button here -->
 </div>
 
 
@@ -2590,9 +2506,7 @@ function continueAfterDeveloperModeRequired() {
     </div>
 </div>
     <hr>
-Version: {{ app_version_num }}<br>
-Need help? Please see the <a href="https://github.com/davesc63/GeoPort/blob/main/FAQ.md" target="_blank">FAQ</a><br>
-Feedback? Please see the <a href="https://www.surveymonkey.com/r/5LJR2M5" target="_blank">Survey</a>
+Version: {{ app_version_num }}
 
 
 

@@ -104,3 +104,7 @@ skills-lock.json
 .agents/skills/writing-shape/agents/openai.yaml
 src/__pycache__/main.cpython-312.pyc
 src/__pycache__/modern_location_client.cpython-312.pyc
+
+# Virtual environments (recreated by start-geoport.ps1)
+.venv-legacy/
+.venv-modern/

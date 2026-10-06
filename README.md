@@ -1,21 +1,11 @@
-# GeoPort: Your Location, Anywhere! 🌍 
+# GeoPort: Your Location, Anywhere! 🌍
+
+> Based on [GeoPort](https://github.com/davesc63/GeoPort) by davesc63, licensed under [GPL-3.0](LICENSE).
+> This is a modified version maintained at [Muranecodes/GeoPort-ios27](https://github.com/Muranecodes/GeoPort-ios27).
+ 
 
 
-<p align="center">
-  
-  <a href="https://www.buymeacoffee.com/davesc63">
-    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=🍺&slug=davesc63&button_colour=FFDD00&font_colour=000000&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer">
-  </a><br> https://geoport.me
-</p>
 
-
-[![Join Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord&style=for-the-badge)](https://discord.gg/genRca55Nb)<br>
-<a href="https://github.com/davesc63/GeoPort/releases/tag/v4.0.2">Release Notes and Downloads</a><br><p>
-<a href="https://github.com/davesc63/GeoPort/blob/main/FAQ.md">Need Help? - FAQ</a><br><p>
-<a href="https://www.surveymonkey.com/r/BLQ8M75">Your feedback helps - Fill out the Survey</a>
-
-<p align="center"><strong>GeoPort needs your help.</p></strong> </p>
-Please consider <strong>donating</strong> and supporting the project. Your support helps to grow the platform and features.<br><p></p><br><p></p>
 
 
 Immerse yourself in a world of possibilities with **GeoPort**, the ultimate location simulation app. GeoPort allows you to take control of your virtual presence, letting you be anywhere on the globe at the touch of a button. Whether you want to explore distant cities, surprise friends with exotic check-ins, or test location-based apps, GeoPort is your passport to a limitless world.
@@ -119,10 +109,4 @@ iOS 17, location spoofing, ios17 location simulation, ios17 windows support<br>
 iOS 18, location spoofing, ios18 location simulation, ios18 windows support
 
 
-## Pay it forward
-If this tools helps you, please consider buying me a beer so I can keep this app going!<br>
-<p align="center">
-  <a href="https://www.buymeacoffee.com/davesc63">
-    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20beer&emoji=🍺&slug=davesc63&button_colour=FFDD00&font_colour=000000&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a beer">
-  </a>
-</p>
+
