@@ -1,10 +1,13 @@
 """Run current pymobiledevice3 beside GeoPort's bundled legacy dependency."""
 
 import json
+import logging
 import queue
 import subprocess
 import threading
 from pathlib import Path
+
+logger = logging.getLogger("GeoPort")
 
 
 class ModernLocationController:
@@ -14,6 +17,7 @@ class ModernLocationController:
         self.bridge = Path(__file__).with_name("modern_location_bridge.py")
         self._process = None
         self._udid = None
+        self._response_queue = None
         self._lock = threading.RLock()
 
     @property
@@ -39,26 +43,72 @@ class ModernLocationController:
 
     def set(self, udid, latitude, longitude):
         with self._lock:
+            # Check if active bridge process is already alive for this udid
+            if (
+                self._process is not None
+                and self._process.poll() is None
+                and self._udid == udid
+                and self._response_queue is not None
+            ):
+                try:
+                    cmd = json.dumps({
+                        "action": "set",
+                        "latitude": float(latitude),
+                        "longitude": float(longitude),
+                    })
+                    self._process.stdin.write(cmd + "\n")
+                    self._process.stdin.flush()
+
+                    try:
+                        line = self._response_queue.get(timeout=10)
+                    except queue.Empty as exc:
+                        raise TimeoutError("DVT stream set did not respond within 10 seconds") from exc
+
+                    if not line:
+                        raise RuntimeError("DVT bridge stream closed unexpectedly")
+
+                    response = json.loads(line)
+                    if not response.get("ready"):
+                        raise RuntimeError(response.get("error") or "DVT stream set failed")
+                    return
+                except Exception as exc:
+                    logger.warning("Error streaming to active DVT session: %s; restarting bridge", exc)
+                    self.stop()
+
+            # Otherwise, spawn a new bridge process
             self.stop()
             process = subprocess.Popen(
                 self._command("set", udid, latitude, longitude),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, bufsize=1,
             )
-            response_line = queue.Queue(maxsize=1)
-            threading.Thread(
-                target=lambda: response_line.put(process.stdout.readline()),
-                daemon=True,
-            ).start()
+            response_queue = queue.Queue()
+
+            def _reader():
+                try:
+                    for line in iter(process.stdout.readline, ''):
+                        response_queue.put(line)
+                except Exception:
+                    pass
+                response_queue.put('')
+
+            reader_thread = threading.Thread(target=_reader, daemon=True)
+            reader_thread.start()
+
             try:
                 try:
-                    line = response_line.get(timeout=90)
+                    line = response_queue.get(timeout=90)
                 except queue.Empty as exc:
                     raise TimeoutError("DVT set did not respond within 90 seconds") from exc
-                response = json.loads(line) if line else {}
+
+                if not line:
+                    stderr_content = process.stderr.read().strip() if process.stderr else ""
+                    raise RuntimeError(stderr_content or "DVT set process exited without response")
+
+                response = json.loads(line)
                 if not response.get("ready"):
-                    raise RuntimeError(response.get("error") or
-                                       process.stderr.read().strip() or "DVT set failed")
+                    stderr_content = process.stderr.read().strip() if process.stderr else ""
+                    raise RuntimeError(response.get("error") or stderr_content or "DVT set failed")
             except Exception:
                 process.terminate()
                 try:
@@ -66,25 +116,42 @@ class ModernLocationController:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
+                for stream in (process.stdin, process.stdout, process.stderr):
+                    try:
+                        if stream:
+                            stream.close()
+                    except Exception:
+                        pass
                 raise
+
             self._process = process
             self._udid = udid
+            self._response_queue = response_queue
 
     def stop(self):
         with self._lock:
             process, udid = self._process, self._udid
-            self._process = self._udid = None
+            self._process = self._udid = self._response_queue = None
             if process is None:
                 return
             if process.poll() is None:
                 try:
-                    process.stdin.write("\n")
+                    process.stdin.write(json.dumps({"action": "clear"}) + "\n")
                     process.stdin.flush()
-                    process.wait(timeout=20)
-                except (BrokenPipeError, subprocess.TimeoutExpired):
+                except (BrokenPipeError, OSError):
+                    pass
+                try:
+                    process.wait(timeout=10)
+                except (subprocess.TimeoutExpired, OSError):
                     process.kill()
                     process.wait()
-            if process.returncode != 0:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                try:
+                    if stream:
+                        stream.close()
+                except Exception:
+                    pass
+            if process.returncode != 0 and process.returncode is not None:
                 self._clear(udid)
 
     def clear(self, udid):

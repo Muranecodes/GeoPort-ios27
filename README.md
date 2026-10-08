@@ -29,6 +29,9 @@ Your privacy matters. GeoPort ensures a secure experience, allowing you to contr
 - **User-Friendly Interface**
 Seamlessly navigate GeoPort's intuitive interface. Set your desired location with a few taps and teleport within seconds.
 
+- **Speed Simulation & Auto Navigation**
+Walk, bike, or drive realistically along real pedestrian footpaths at configurable speeds, or maneuver directly in real-time with WASD keyboard controls.
+
 - **Unleash Your Imagination with GeoPort!**
 Download now and elevate your location experience beyond boundaries. Teleportation has never been this easy—**GeoPort**, where every location is just a click away!
 
@@ -60,7 +63,33 @@ They've made it harder to enable Developer Mode, but GeoPort handles it with eas
 <img src="https://github.com/davesc63/GeoPort/blob/main/images/passcode.png" alt="passcode" width="50%">
 </p>
 
+## Speed Simulation & Auto Navigation (時速移動模擬與自動導航) 🚶🚴🚗
 
+GeoPort now includes a comprehensive movement simulation engine designed for location-based games (such as Pokémon GO, Monster Hunter Now) and delivery/navigation app testing:
+
+- **Auto Navigation Mode (自動步行路線導航)**:
+  - Click the **Auto Navigation** button (<i class="lni lni-direction-alt"></i>) on the map toolbar to toggle targeting mode, then click any destination on the map.
+  - Automatically calculates pedestrian routes along real footpaths and sidewalks via OpenStreetMap OSRM routing (with automatic fallback to straight-line interpolation if offline or off-road).
+  - Automatically exits targeting mode upon launch so you can freely pan and inspect the map while movement progresses in the background.
+  - Updates simulated GPS at realistic 1.0 Hz hardware intervals to match native GPS behavior and prevent anti-cheat detection flags.
+
+- **Dynamic Speed Controls (即時速度控制)**:
+  - Quick presets: **Walk** (5 km/h), **Bike** (20 km/h), and **Drive** (60 km/h).
+  - Custom numeric slider and input field supporting fine-grained adjustments from 0.1 km/h to 120.0 km/h.
+  - Adjust speed dynamically mid-journey without stopping or restarting your trip.
+
+- **Keyboard Real-Time Controls (WASD / 方向鍵手動操控)**:
+  - Hold `W` / `A` / `S` / `D` or `Arrow Keys` (↑ / ← / ↓ / →) to walk smoothly in cardinal directions.
+  - Movement stops immediately when the keys are released.
+  - Manual keypresses cleanly interrupt active auto-navigation to give you immediate control.
+
+- **Interactive HUD & Camera Tracking (浮動導航資訊與視角鎖定)**:
+  - Floating status HUD displays remaining distance, ETA (estimated time of arrival), real-time speed, with **Pause / Resume** and **Stop** buttons.
+  - Camera tracking toggle button (<i class="lni lni-target"></i>) keeps your avatar centered in the viewport, with unlock support for free panning.
+
+- **Background Worker & Persistent DVT Streaming (背景持續行進)**:
+  - Server-side 1Hz background dispatch worker thread ensures continuous movement even when the browser tab is minimized or backgrounded.
+  - Persistent iOS DVT streaming connection keeps device location updates instant and smooth without connection teardown overhead.
 
 ## Prerequisites
 

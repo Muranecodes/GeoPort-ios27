@@ -1,7 +1,7 @@
 """Keep an iOS 17+ DVT location session alive using a recent pymobiledevice3.
 
 This file runs in a separate Python environment from the legacy GeoPort app.
-The parent keeps stdin open and writes one newline to clear the location.
+The parent keeps stdin open and writes JSON lines to stream updates or clear.
 """
 
 import argparse
@@ -42,6 +42,13 @@ async def verify_target(udid):
         await lockdown.close()
 
 
+def validate_coords(lat, lng):
+    if not math.isfinite(lat) or not math.isfinite(lng):
+        raise ValueError("Coordinates must be finite numbers")
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        raise ValueError("Coordinates are out of range")
+
+
 async def run(args):
     await verify_target(args.udid)
     async with PreferredRsdTunnel(serial=args.udid) as rsd:
@@ -54,16 +61,49 @@ async def run(args):
                 await simulator.clear()
                 print(json.dumps({"cleared": True}), flush=True)
                 return
-            if not math.isfinite(args.latitude) or not math.isfinite(args.longitude):
-                raise ValueError("Coordinates must be finite numbers")
-            if not (-90 <= args.latitude <= 90 and -180 <= args.longitude <= 180):
-                raise ValueError("Coordinates are out of range")
+
+            validate_coords(args.latitude, args.longitude)
             await simulator.set(args.latitude, args.longitude)
-            print(json.dumps({"ready": True}), flush=True)
+            print(json.dumps({"ready": True, "latitude": args.latitude, "longitude": args.longitude}), flush=True)
+
             try:
-                await asyncio.to_thread(sys.stdin.readline)
+                while True:
+                    line = await asyncio.to_thread(sys.stdin.readline)
+                    if not line:
+                        break
+                    line = line.strip()
+                    if not line:
+                        break
+
+                    try:
+                        cmd = json.loads(line)
+                    except Exception as exc:
+                        print(json.dumps({"error": f"Invalid JSON command: {exc}"}), flush=True)
+                        continue
+
+                    action = cmd.get("action")
+                    if action == "set":
+                        try:
+                            lat = float(cmd["latitude"])
+                            lng = float(cmd["longitude"])
+                            validate_coords(lat, lng)
+                            await simulator.set(lat, lng)
+                            print(json.dumps({"ready": True, "latitude": lat, "longitude": lng}), flush=True)
+                        except Exception as exc:
+                            print(json.dumps({"error": str(exc)}), flush=True)
+                    elif action == "clear":
+                        await simulator.clear()
+                        print(json.dumps({"cleared": True}), flush=True)
+                        return
+                    elif action == "ping":
+                        print(json.dumps({"pong": True}), flush=True)
+                    else:
+                        print(json.dumps({"error": f"Unknown action: {action}"}), flush=True)
             finally:
-                await simulator.clear()
+                try:
+                    await simulator.clear()
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":

@@ -79,6 +79,17 @@
             max-height: 70vh;
         }
 
+        /* Smooth moving marker animation between 1-second ticks */
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow {
+            transition: transform 0.95s linear;
+        }
+        .leaflet-drag-target,
+        .leaflet-zoom-anim .leaflet-marker-icon,
+        .leaflet-zoom-anim .leaflet-marker-shadow {
+            transition: none !important;
+        }
+
         .coordinates-container {
             margin-top: 10px;
         }
@@ -233,6 +244,239 @@ body.dark-mode .modal-footer button {
     padding: 4px; /* Adjust padding as needed */
 }
 
+/* Active state for toolbar buttons (Auto Nav, Camera Tracking, Draw Track) */
+.leaflet-bar button.active,
+.leaflet-control-filelayer-custom.active,
+.easy-button-button.active,
+#autoNavButton.active,
+#cameraFollowButton.active {
+    background-color: #007bff !important;
+    color: #ffffff !important;
+}
+.leaflet-bar button.active i,
+.leaflet-control-filelayer-custom.active i,
+.easy-button-button.active i,
+#autoNavButton.active i,
+#cameraFollowButton.active i {
+    color: #ffffff !important;
+}
+
+/* Speed Control Widget Styles */
+.speed-control-widget {
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    z-index: 1000;
+    user-select: none;
+    min-width: 250px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+body.dark-mode .speed-control-widget {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border-color: #555;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.speed-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #555;
+}
+
+body.dark-mode .speed-control-header {
+    color: #aaa;
+}
+
+.speed-presets-group {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.speed-preset-btn {
+    flex: 1;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #ced4da;
+    background: #f8f9fa;
+    color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease-in-out;
+}
+
+.speed-preset-btn:hover {
+    background: #e2e6ea;
+    border-color: #dae0e5;
+}
+
+.speed-preset-btn.active {
+    background: #007bff;
+    color: #ffffff;
+    border-color: #007bff;
+    box-shadow: 0 1px 3px rgba(0,123,255,0.4);
+}
+
+body.dark-mode .speed-preset-btn {
+    background: #3a3a3a;
+    color: #ddd;
+    border-color: #555;
+}
+
+body.dark-mode .speed-preset-btn:hover {
+    background: #4a4a4a;
+}
+
+body.dark-mode .speed-preset-btn.active {
+    background: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+}
+
+.speed-inputs-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.speed-slider-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+#speedRangeSlider {
+    width: 100%;
+    cursor: pointer;
+    height: 4px;
+}
+
+.speed-number-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#speedNumberInput {
+    width: 60px;
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    text-align: right;
+}
+
+body.dark-mode #speedNumberInput {
+    background: #3a3a3a;
+    color: #fff;
+    border-color: #555;
+}
+
+.speed-unit {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+body.dark-mode .speed-unit {
+    color: #aaa;
+}
+
+/* Navigation HUD Styles */
+.navigation-hud {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    z-index: 1000;
+    user-select: none;
+    min-width: 250px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+body.dark-mode .navigation-hud {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border-color: #555;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .navigation-hud .card-body {
+    background: #2b2b2b;
+    color: #e0e0e0;
+}
+
+.navigation-hud-header {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+}
+
+body.dark-mode .navigation-hud-header {
+    color: #f0f0f0;
+}
+
+.hud-stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    background: #f8f9fa;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+body.dark-mode .hud-stats-row {
+    background: #222222;
+    border-color: #444;
+}
+
+.hud-stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.hud-stat-label {
+    display: block;
+    font-size: 10px;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+body.dark-mode .hud-stat-label {
+    color: #aaa;
+}
+
+.hud-stat-value {
+    font-weight: 600;
+    font-size: 12px;
+    color: #212529;
+}
+
+body.dark-mode .hud-stat-value {
+    color: #fff;
+}
+
+.hud-actions {
+    display: flex;
+    gap: 6px;
+}
+
     </style>
 </head>
 
@@ -374,6 +618,56 @@ body.dark-mode .modal-footer button {
 
 	<div id="dataList" class="mb-3"></div>
         </form>
+	<!-- Speed Control Toolbar Widget -->
+	<div id="speedControlWidget" class="speed-control-widget mb-2">
+		<div class="speed-control-header">
+			<span><i class="fa-solid fa-gauge-high mr-1"></i> Speed Control</span>
+			<span id="speedDisplayBadge" class="badge badge-primary">5 km/h</span>
+		</div>
+		<div class="speed-presets-group" role="group" aria-label="Speed Presets">
+			<button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">Walk (5 km/h)</button>
+			<button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="20" onclick="setSpeed(20.0)">Bike (20 km/h)</button>
+			<button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">Drive (60 km/h)</button>
+		</div>
+		<div class="speed-inputs-row">
+			<div class="speed-slider-wrap">
+				<input type="range" class="form-range" id="speedRangeSlider" min="1" max="100" step="1" value="5" title="Speed Range Slider">
+			</div>
+			<div class="speed-number-wrap">
+				<input type="number" class="form-control form-control-sm" id="speedNumberInput" min="0.1" max="200" step="0.5" value="5" title="Speed in km/h">
+				<span class="speed-unit">km/h</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Navigation HUD Floating Panel -->
+	<div id="navigationHud" class="navigation-hud card mb-2" style="display: none;">
+		<div class="card-body p-2">
+			<div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
+				<span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
+				<span id="navStatusBadge" class="badge badge-success">運行中</span>
+			</div>
+			<div class="hud-stats-row mb-2">
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">速度</span>
+					<span id="navHudSpeed" class="hud-stat-value">5.0 km/h</span>
+				</div>
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">剩餘距離</span>
+					<span id="navHudDistance" class="hud-stat-value">0 m</span>
+				</div>
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">預計抵達</span>
+					<span id="navHudEta" class="hud-stat-value">0s</span>
+				</div>
+			</div>
+			<div class="hud-actions d-flex gap-2">
+				<button type="button" id="navPauseResumeBtn" class="btn btn-sm btn-outline-warning flex-fill" onclick="toggleNavPause()">暫停</button>
+				<button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" onclick="stopNavigation()">停止導航</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="map"></div>
 
 <script>
@@ -679,6 +973,16 @@ async function initializeMap(userLocale) {
     await searchLocation(userLocale);
 
     map.on('dblclick', handleMapDoubleClick);
+    map.on('click', function(e) {
+        if (window.isAutoNavMode) {
+            handleAutoNavMapClick(e);
+        }
+    });
+    map.on('dragstart', function() {
+        if (window.isCameraLocked) {
+            setCameraLock(false);
+        }
+    });
 
     // Set the zoom level to 4
     map.setZoom(4);
@@ -717,6 +1021,36 @@ async function initializeMap(userLocale) {
 
     // Add layer control to map
     L.control.layers(baseLayers).addTo(map);
+
+    // Add Speed Control Widget to Leaflet map
+    var SpeedControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function(mapInstance) {
+            var widget = document.getElementById('speedControlWidget');
+            if (widget) {
+                L.DomEvent.disableClickPropagation(widget);
+                L.DomEvent.disableScrollPropagation(widget);
+                return widget;
+            }
+            return L.DomUtil.create('div');
+        }
+    });
+    new SpeedControl().addTo(map);
+
+    // Add Navigation HUD to Leaflet map
+    var NavigationHudControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function(mapInstance) {
+            var hud = document.getElementById('navigationHud');
+            if (hud) {
+                L.DomEvent.disableClickPropagation(hud);
+                L.DomEvent.disableScrollPropagation(hud);
+                return hud;
+            }
+            return L.DomUtil.create('div');
+        }
+    });
+    new NavigationHudControl().addTo(map);
 
 
 
@@ -976,6 +1310,51 @@ fileLayerControlContainer.appendChild(drawPolylineButton.button);
 // Add the custom class to the EasyButton's container element
 drawPolylineButton.button.classList.add('leaflet-control-filelayer-custom');
 
+// Create Auto Navigation button using EasyButton
+var autoNavButton = L.easyButton({
+    id: 'autoNavButton',
+    states: [{
+        stateName: 'auto-nav',
+        icon: '<i class="lni lni-direction-alt"></i>',
+        title: 'Auto Navigation',
+        onClick: function(btn, map) {
+            toggleAutoNavMode();
+        }
+    }]
+});
+autoNavButton.button.id = 'autoNavButton';
+autoNavButton.button.style.fontSize = '24px';
+autoNavButton.button.style.paddingLeft = '4px';
+autoNavButton.addTo(map);
+
+if (fileLayerControlContainer) {
+    fileLayerControlContainer.appendChild(autoNavButton.button);
+}
+autoNavButton.button.classList.add('leaflet-control-filelayer-custom');
+
+// Create Camera Follow button using EasyButton
+var cameraFollowButton = L.easyButton({
+    id: 'cameraFollowButton',
+    states: [{
+        stateName: 'camera-follow',
+        icon: '<i class="lni lni-target"></i>',
+        title: 'Camera Tracking (Locked)',
+        onClick: function(btn, map) {
+            toggleCameraLock();
+        }
+    }]
+});
+cameraFollowButton.button.id = 'cameraFollowButton';
+cameraFollowButton.button.style.fontSize = '24px';
+cameraFollowButton.button.style.paddingLeft = '4px';
+cameraFollowButton.addTo(map);
+
+if (fileLayerControlContainer) {
+    fileLayerControlContainer.appendChild(cameraFollowButton.button);
+}
+cameraFollowButton.button.classList.add('leaflet-control-filelayer-custom');
+cameraFollowButton.button.classList.add('active'); // Default state is locked
+
 //===========
 
 // Define the validateInput function
@@ -1146,6 +1525,9 @@ customButton.onclick = function() {
     isPlaybackStopped = true; // Stop playback if active
     playbackIndex = 0;
     console.log("Trash: isPlaybackStopped", isPlaybackStopped);
+    if (typeof clearNavRoute === 'function') {
+        clearNavRoute();
+    }
 
     // Hide the textbox
     var textbox = document.getElementById('timeToPointText');
@@ -1346,6 +1728,7 @@ function createMarker(latlng) {
 
 // Function to create a new marker on double click
 function handleMapDoubleClick(e) {
+    if (window.isAutoNavMode) return;
     // Disable double-click zooming
     map.doubleClickZoom.disable();
     if (!marker)
@@ -1385,6 +1768,9 @@ let currentLayer = null;
 
 // Function to set coordinates
 function setCoordinates(lat, lng) {
+    if (typeof window !== 'undefined') {
+        window.lastDispatchedMoveCoords = { lat: Number(lat), lng: Number(lng) };
+    }
     document.getElementById('coordinates').value = lat + ', ' + lng;
     updateSetLocationButtonStatus();
     updateStopLocationButtonStatus(); // Add this line to update the Stop Location button status
@@ -1666,17 +2052,37 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Function to calculate time required to travel between two points based on velocity
 function calculateTime(distance, velocity) {
-    const speed = {
+    const speedPresets = {
         "walk": 6,  // km/h
         "run": 12,  // km/h
         "ride": 20,  // km/h
+        "bike": 20,  // km/h
         "drive": 50  // km/h
     };
-    const speedKmh = speed[velocity] || speed["walk"]; // Default to walking speed if velocity is not found
+    let speedKmh = null;
+
+    if (typeof velocity === 'number' && !isNaN(velocity) && velocity > 0) {
+        speedKmh = velocity;
+    } else if (typeof velocity === 'string') {
+        const trimmed = velocity.trim().toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(speedPresets, trimmed)) {
+            speedKmh = speedPresets[trimmed];
+        } else {
+            const parsed = parseFloat(trimmed);
+            if (!isNaN(parsed) && parsed > 0) {
+                speedKmh = parsed;
+            }
+        }
+    }
+
+    if (!speedKmh || speedKmh <= 0) {
+        speedKmh = speedPresets["walk"]; // Default to walking speed if velocity is not found or invalid
+    }
 
     // Convert distance to kilometers and calculate time in seconds
     return (distance / speedKmh) * 3600;
 }
+window.calculateTime = calculateTime;
 
 
 function simulateGPXPlayback(lineLatLngs, velocity) {
@@ -1744,38 +2150,862 @@ function resetPlaybackFlag() {
 
 //============== GPX Playback =============================
 
-// Function to handle keyboard directional key presses
-function handleKeyDown(event) {
-    const stepSize = 0.0001; // Adjust this value as needed
-    const latLng = marker.getLatLng();
-    console.log('key down');
-    let newLatLng;
+//============== Keyboard WASD Steering =============================
 
-    switch (event.key) {
-        case 'ArrowUp':
-            newLatLng = [latLng.lat + stepSize, latLng.lng];
-            console.log("up");
-            break;
-        case 'ArrowDown':
-            newLatLng = [latLng.lat - stepSize, latLng.lng];
-            console.log("down");
-            break;
-        case 'ArrowLeft':
-            newLatLng = [latLng.lat, latLng.lng - stepSize];
-            break;
-        case 'ArrowRight':
-            newLatLng = [latLng.lat, latLng.lng + stepSize];
-            break;
-        default:
-            return; // Do nothing if other keys are pressed
+// Active key state tracking
+const pressedKeyDirections = new Map(); // keyIdentifier -> direction ('w', 'a', 's', 'd')
+let activeMovementInterval = null;
+let activeDirection = null;
+
+//============== Speed Control UI & State Management =============================
+window.currentSpeedKmh = 5.0;
+
+function syncSpeedControls(speed) {
+    const numInput = document.getElementById('speedNumberInput');
+    const slider = document.getElementById('speedRangeSlider');
+    const badge = document.getElementById('speedDisplayBadge');
+    const walkBtn = document.getElementById('speedPresetWalk');
+    const bikeBtn = document.getElementById('speedPresetBike');
+    const driveBtn = document.getElementById('speedPresetDrive');
+
+    if (numInput && parseFloat(numInput.value) !== speed) {
+        numInput.value = speed;
+    }
+    if (slider) {
+        const sliderVal = Math.min(Math.max(speed, parseFloat(slider.min) || 1), parseFloat(slider.max) || 100);
+        if (parseFloat(slider.value) !== sliderVal) {
+            slider.value = sliderVal;
+        }
+    }
+    if (badge) {
+        badge.innerText = speed + ' km/h';
     }
 
-    marker.setLatLng(newLatLng);
-    setLocationArrows();
-    setCoordinates(newLatLng[0], newLatLng[1]);
-
-    event.preventDefault(); // Prevent default behavior of arrow key presses
+    if (walkBtn) walkBtn.classList.toggle('active', Math.abs(speed - 5.0) < 0.01);
+    if (bikeBtn) bikeBtn.classList.toggle('active', Math.abs(speed - 20.0) < 0.01);
+    if (driveBtn) driveBtn.classList.toggle('active', Math.abs(speed - 60.0) < 0.01);
 }
+
+function updateBackendSpeed(speed) {
+    fetch('/update_speed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speed_kmh: speed })
+    })
+    .then(res => {
+        if (!res.ok) {
+            console.warn('Failed to update speed on server, HTTP ' + res.status);
+        }
+        return res.json();
+    })
+    .catch(err => {
+        console.error('Error updating backend speed:', err);
+    });
+}
+
+function setSpeed(speed, syncServer = true) {
+    let parsed = parseFloat(speed);
+    if (isNaN(parsed) || parsed <= 0) {
+        parsed = 5.0;
+    }
+    parsed = Math.round(parsed * 10) / 10;
+
+    window.currentSpeedKmh = parsed;
+    syncSpeedControls(parsed);
+
+    try {
+        localStorage.setItem('geoport_speed_kmh', parsed.toString());
+    } catch (e) {
+        console.warn('Failed to save speed to localStorage:', e);
+    }
+
+    if (syncServer) {
+        updateBackendSpeed(parsed);
+    }
+}
+window.setSpeed = setSpeed;
+
+function initSpeedControl() {
+    let initialSpeed = 5.0;
+    try {
+        const stored = localStorage.getItem('geoport_speed_kmh');
+        if (stored !== null) {
+            const parsedStored = parseFloat(stored);
+            if (!isNaN(parsedStored) && parsedStored > 0) {
+                initialSpeed = parsedStored;
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to read speed from localStorage:', e);
+    }
+
+    const slider = document.getElementById('speedRangeSlider');
+    const numInput = document.getElementById('speedNumberInput');
+
+    if (slider) {
+        slider.addEventListener('input', function() {
+            setSpeed(this.value, true);
+        });
+    }
+
+    if (numInput) {
+        numInput.addEventListener('input', function() {
+            if (this.value && !isNaN(parseFloat(this.value)) && parseFloat(this.value) > 0) {
+                setSpeed(this.value, true);
+            }
+        });
+        numInput.addEventListener('change', function() {
+            setSpeed(this.value, true);
+        });
+    }
+
+    setSpeed(initialSpeed, true);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSpeedControl);
+} else {
+    initSpeedControl();
+}
+
+// Helper to determine the current speed in km/h (defaults to 5.0 km/h)
+function getCurrentSpeed() {
+    if (typeof window.currentSpeedKmh === 'number' && !isNaN(window.currentSpeedKmh) && window.currentSpeedKmh > 0) {
+        return window.currentSpeedKmh;
+    }
+    const speedNumInput = document.getElementById('speedNumberInput');
+    if (speedNumInput && speedNumInput.value && !isNaN(parseFloat(speedNumInput.value)) && parseFloat(speedNumInput.value) > 0) {
+        return parseFloat(speedNumInput.value);
+    }
+    const speedInput = document.getElementById('speedInput');
+    if (speedInput && speedInput.value && !isNaN(parseFloat(speedInput.value)) && parseFloat(speedInput.value) > 0) {
+        return parseFloat(speedInput.value);
+    }
+    const customSpeedInput = document.getElementById('customSpeedInput');
+    if (customSpeedInput && customSpeedInput.value && !isNaN(parseFloat(customSpeedInput.value)) && parseFloat(customSpeedInput.value) > 0) {
+        return parseFloat(customSpeedInput.value);
+    }
+    if (typeof velocitySelect !== 'undefined' && velocitySelect !== null) {
+        const parsed = parseFloat(velocitySelect);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+        const speedPresets = {
+            'walk': 5.0,
+            'run': 12.0,
+            'ride': 20.0,
+            'bike': 20.0,
+            'drive': 60.0
+        };
+        if (typeof speedPresets[velocitySelect] === 'number') {
+            return speedPresets[velocitySelect];
+        }
+    }
+    return 5.0;
+}
+window.getCurrentSpeed = getCurrentSpeed;
+
+//============== Navigation Engine & HUD Management =============================
+window.isNavigating = false;
+window.navPollInterval = null;
+window.navPaused = false;
+
+function formatNavDistance(meters) {
+    if (typeof meters !== 'number' || isNaN(meters)) return '0 m';
+    if (meters >= 1000) {
+        return (meters / 1000).toFixed(2) + ' km';
+    }
+    return Math.round(meters) + ' m';
+}
+
+function formatNavTime(seconds) {
+    if (typeof seconds !== 'number' || isNaN(seconds) || seconds <= 0) return '0s';
+    if (seconds >= 3600) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return h + 'h ' + m + 'm';
+    }
+    if (seconds >= 60) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.round(seconds % 60);
+        return m + 'm ' + s + 's';
+    }
+    return Math.round(seconds) + 's';
+}
+
+function updateNavHud(data) {
+    const hud = document.getElementById('navigationHud');
+    if (!hud) return;
+
+    const speedEl = document.getElementById('navHudSpeed');
+    const distEl = document.getElementById('navHudDistance');
+    const etaEl = document.getElementById('navHudEta');
+    const statusBadge = document.getElementById('navStatusBadge');
+    const pauseBtn = document.getElementById('navPauseResumeBtn');
+
+    if (speedEl && typeof data.speed_kmh === 'number') {
+        speedEl.textContent = data.speed_kmh.toFixed(1) + ' km/h';
+    }
+    if (distEl && typeof data.remaining_distance_m === 'number') {
+        distEl.textContent = formatNavDistance(data.remaining_distance_m);
+    }
+    if (etaEl && typeof data.remaining_time_s === 'number') {
+        etaEl.textContent = formatNavTime(data.remaining_time_s);
+    }
+    if (statusBadge) {
+        if (data.paused) {
+            statusBadge.className = 'badge badge-warning';
+            statusBadge.textContent = '已暫停';
+        } else {
+            statusBadge.className = 'badge badge-success';
+            statusBadge.textContent = '運行中';
+        }
+    }
+    if (pauseBtn) {
+        pauseBtn.textContent = data.paused ? '繼續' : '暫停';
+        if (data.paused) {
+            pauseBtn.classList.remove('btn-outline-warning');
+            pauseBtn.classList.add('btn-outline-success');
+        } else {
+            pauseBtn.classList.remove('btn-outline-success');
+            pauseBtn.classList.add('btn-outline-warning');
+        }
+    }
+}
+
+function fetchNavigationStatus() {
+    return fetch('/navigation_status')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('navigation_status HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+
+            window.navPaused = !!data.paused;
+
+            if (data.active) {
+                window.isNavigating = true;
+                const hud = document.getElementById('navigationHud');
+                if (hud && hud.style.display === 'none') {
+                    hud.style.display = 'block';
+                }
+                updateNavHud(data);
+
+                // Update marker position and coordinates smoothly
+                if (typeof data.current_lat === 'number' && typeof data.current_lng === 'number' &&
+                    (data.current_lat !== 0 || data.current_lng !== 0)) {
+                    updatePositionOnStep(data.current_lat, data.current_lng);
+                }
+            } else if (data.completed) {
+                // Arrived at destination!
+                stopNavigationStatusPolling();
+                if (typeof data.current_lat === 'number' && typeof data.current_lng === 'number' &&
+                    (data.current_lat !== 0 || data.current_lng !== 0)) {
+                    updatePositionOnStep(data.current_lat, data.current_lng);
+                }
+                clearNavRoute();
+                if (typeof displayToast === 'function') {
+                    displayToast("已到達目的地");
+                }
+            } else {
+                // Stopped externally
+                stopNavigationStatusPolling();
+                clearNavRoute();
+            }
+            return data;
+        })
+        .catch(err => {
+            console.error('Error fetching navigation status:', err);
+        });
+}
+
+function startNavigationStatusPolling() {
+    if (window.navPollInterval) {
+        clearInterval(window.navPollInterval);
+    }
+    window.isNavigating = true;
+    const hud = document.getElementById('navigationHud');
+    if (hud) {
+        hud.style.display = 'block';
+    }
+    fetchNavigationStatus();
+    window.navPollInterval = setInterval(fetchNavigationStatus, 1000);
+}
+
+function stopNavigationStatusPolling() {
+    if (window.navPollInterval) {
+        clearInterval(window.navPollInterval);
+        window.navPollInterval = null;
+    }
+    window.isNavigating = false;
+    window.navPaused = false;
+    const hud = document.getElementById('navigationHud');
+    if (hud) {
+        hud.style.display = 'none';
+    }
+}
+
+function stopNavigation() {
+    clearNavRoute();
+    return fetch('/stop_navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        stopNavigationStatusPolling();
+        clearNavRoute();
+        if (data && data.current_location &&
+            typeof data.current_location.lat === 'number' &&
+            typeof data.current_location.lng === 'number' &&
+            (data.current_location.lat !== 0 || data.current_location.lng !== 0)) {
+            updatePositionOnStep(data.current_location.lat, data.current_location.lng);
+        }
+        return data;
+    })
+    .catch(err => {
+        console.error('Error stopping navigation:', err);
+        stopNavigationStatusPolling();
+        clearNavRoute();
+    });
+}
+
+function toggleNavPause() {
+    const endpoint = window.navPaused ? '/resume_navigation' : '/pause_navigation';
+    return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        window.navPaused = !window.navPaused;
+        const pauseBtn = document.getElementById('navPauseResumeBtn');
+        const statusBadge = document.getElementById('navStatusBadge');
+        if (pauseBtn) {
+            pauseBtn.textContent = window.navPaused ? '繼續' : '暫停';
+            if (window.navPaused) {
+                pauseBtn.classList.remove('btn-outline-warning');
+                pauseBtn.classList.add('btn-outline-success');
+            } else {
+                pauseBtn.classList.remove('btn-outline-success');
+                pauseBtn.classList.add('btn-outline-warning');
+            }
+        }
+        if (statusBadge) {
+            statusBadge.textContent = window.navPaused ? '已暫停' : '運行中';
+            statusBadge.className = window.navPaused ? 'badge badge-warning' : 'badge badge-success';
+        }
+        return data;
+    })
+    .catch(err => {
+        console.error('Error toggling nav pause:', err);
+    });
+}
+
+function startNavigation(waypoints, speed) {
+    if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
+        if (typeof displayToast === 'function') {
+            displayToast("導航路徑至少需要2個座標點");
+        }
+        return Promise.reject(new Error("Waypoints must have at least 2 points"));
+    }
+    const speedKmh = (typeof speed === 'number' && speed > 0) ? speed : getCurrentSpeed();
+    return fetch('/start_navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            waypoints: waypoints,
+            speed_kmh: speedKmh
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('start_navigation HTTP ' + res.status);
+        return res.json();
+    })
+    .then(data => {
+        startNavigationStatusPolling();
+        return data;
+    })
+    .catch(err => {
+        console.error('Error starting navigation:', err);
+        if (typeof displayToast === 'function') {
+            displayToast("啟動導航失敗: " + err.message);
+        }
+        throw err;
+    });
+}
+
+window.startNavigation = startNavigation;
+window.stopNavigation = stopNavigation;
+window.toggleNavPause = toggleNavPause;
+window.startNavigationStatusPolling = startNavigationStatusPolling;
+window.stopNavigationStatusPolling = stopNavigationStatusPolling;
+window.formatNavDistance = formatNavDistance;
+window.formatNavTime = formatNavTime;
+window.updateNavHud = updateNavHud;
+window.fetchNavigationStatus = fetchNavigationStatus;
+
+//============== Auto Navigation Mode & Camera Tracking (Ticket 05) =============================
+window.isAutoNavMode = false;
+window.isCameraLocked = true;
+window.navRoutePolyline = null;
+
+function getCoordinates() {
+    if (marker && typeof marker.getLatLng === 'function') {
+        const curLatLng = marker.getLatLng();
+        if (curLatLng && !isNaN(curLatLng.lat) && !isNaN(curLatLng.lng)) {
+            return { lat: curLatLng.lat, lng: curLatLng.lng };
+        }
+    }
+    const coordInput = document.getElementById('coordinates');
+    if (coordInput && coordInput.value) {
+        const parts = coordInput.value.split(',');
+        if (parts.length === 2) {
+            const parsedLat = parseFloat(parts[0].trim());
+            const parsedLng = parseFloat(parts[1].trim());
+            if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+                return { lat: parsedLat, lng: parsedLng };
+            }
+        }
+    }
+    if (typeof map !== 'undefined' && map && typeof map.getCenter === 'function') {
+        const center = map.getCenter();
+        if (center && !isNaN(center.lat) && !isNaN(center.lng)) {
+            return { lat: center.lat, lng: center.lng };
+        }
+    }
+    return null;
+}
+window.getCoordinates = getCoordinates;
+
+function toggleAutoNavMode(forceState, suppressToast = false) {
+    if (typeof forceState === 'boolean') {
+        window.isAutoNavMode = forceState;
+    } else {
+        window.isAutoNavMode = !window.isAutoNavMode;
+    }
+
+    const btn = document.getElementById('autoNavButton');
+    const mapContainer = (typeof map !== 'undefined' && map && typeof map.getContainer === 'function') ? map.getContainer() : document.getElementById('map');
+
+    if (window.isAutoNavMode) {
+        if (btn) {
+            btn.classList.add('active');
+            btn.title = 'Auto Navigation (Active)';
+        }
+        if (mapContainer && mapContainer.style) {
+            mapContainer.style.cursor = 'crosshair';
+        }
+        if (!suppressToast && typeof displayToast === 'function') {
+            displayToast("自動導航模式已開啟：請點擊地圖目的地出發");
+        }
+    } else {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.title = 'Auto Navigation';
+        }
+        if (mapContainer && mapContainer.style) {
+            mapContainer.style.cursor = '';
+        }
+        if (!suppressToast && typeof displayToast === 'function') {
+            displayToast("自動導航模式已關閉");
+        }
+    }
+    return window.isAutoNavMode;
+}
+window.toggleAutoNavMode = toggleAutoNavMode;
+
+function setCameraLock(locked) {
+    window.isCameraLocked = !!locked;
+    const btn = document.getElementById('cameraFollowButton');
+    if (btn) {
+        if (window.isCameraLocked) {
+            btn.classList.add('active');
+            btn.title = 'Camera Tracking (Locked)';
+        } else {
+            btn.classList.remove('active');
+            btn.title = 'Camera Tracking (Unlocked)';
+        }
+    }
+    return window.isCameraLocked;
+}
+window.setCameraLock = setCameraLock;
+
+function toggleCameraLock() {
+    const newState = setCameraLock(!window.isCameraLocked);
+    if (newState) {
+        const coords = getCoordinates();
+        if (coords && typeof map !== 'undefined' && map && typeof map.panTo === 'function') {
+            map.panTo([coords.lat, coords.lng]);
+        }
+    }
+    return newState;
+}
+window.toggleCameraLock = toggleCameraLock;
+
+function buildOsrmFootRouteUrl(startLat, startLng, destLat, destLng) {
+    return `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+}
+window.buildOsrmFootRouteUrl = buildOsrmFootRouteUrl;
+
+function parseOsrmRouteGeometry(osrmData) {
+    if (osrmData &&
+        (osrmData.code === 'Ok' || osrmData.code === 'ok') &&
+        Array.isArray(osrmData.routes) &&
+        osrmData.routes.length > 0 &&
+        osrmData.routes[0].geometry &&
+        Array.isArray(osrmData.routes[0].geometry.coordinates) &&
+        osrmData.routes[0].geometry.coordinates.length > 0) {
+        return osrmData.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    }
+    return null;
+}
+window.parseOsrmRouteGeometry = parseOsrmRouteGeometry;
+
+function getFallbackRoute(startLat, startLng, destLat, destLng) {
+    return [[startLat, startLng], [destLat, destLng]];
+}
+window.getFallbackRoute = getFallbackRoute;
+
+const osrmRouteCache = new Map();
+window.osrmRouteCache = osrmRouteCache;
+
+async function fetchOsrmRoute(startLat, startLng, destLat, destLng, timeoutMs = 5000) {
+    const sLat = typeof startLat === 'number' ? startLat : parseFloat(startLat);
+    const sLng = typeof startLng === 'number' ? startLng : parseFloat(startLng);
+    const dLat = typeof destLat === 'number' ? destLat : parseFloat(destLat);
+    const dLng = typeof destLng === 'number' ? destLng : parseFloat(destLng);
+    const cacheKey = `${sLat.toFixed(5)},${sLng.toFixed(5)}-${dLat.toFixed(5)},${dLng.toFixed(5)}`;
+    if (window.osrmRouteCache && window.osrmRouteCache.has(cacheKey)) {
+        return window.osrmRouteCache.get(cacheKey);
+    }
+    const url = buildOsrmFootRouteUrl(startLat, startLng, destLat, destLng);
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) {
+            console.warn('OSRM request failed with HTTP status', res.status);
+            return getFallbackRoute(startLat, startLng, destLat, destLng);
+        }
+        const data = await res.json();
+        const coords = parseOsrmRouteGeometry(data);
+        if (coords && coords.length >= 2) {
+            if (window.osrmRouteCache) {
+                window.osrmRouteCache.set(cacheKey, coords);
+            }
+            return coords;
+        }
+        return getFallbackRoute(startLat, startLng, destLat, destLng);
+    } catch (err) {
+        console.warn('OSRM routing failed or timed out, falling back to direct line:', err);
+        return getFallbackRoute(startLat, startLng, destLat, destLng);
+    }
+}
+window.fetchOsrmRoute = fetchOsrmRoute;
+
+function clearNavRoute() {
+    if (window.navRoutePolyline) {
+        if (typeof map !== 'undefined' && map && map.hasLayer(window.navRoutePolyline)) {
+            map.removeLayer(window.navRoutePolyline);
+        }
+        window.navRoutePolyline = null;
+    }
+}
+window.clearNavRoute = clearNavRoute;
+
+async function handleAutoNavMapClick(e) {
+    if (!window.isAutoNavMode) return;
+    if (!e || !e.latlng) return;
+
+    const startCoords = getCoordinates();
+    if (!startCoords || typeof startCoords.lat !== 'number' || typeof startCoords.lng !== 'number' || isNaN(startCoords.lat) || isNaN(startCoords.lng)) {
+        if (typeof displayToast === 'function') {
+            displayToast("請先在地圖上設定當前位置或連線設備");
+        }
+        return;
+    }
+
+    const startLat = startCoords.lat;
+    const startLng = startCoords.lng;
+    const destLat = e.latlng.lat;
+    const destLng = e.latlng.lng;
+
+    if (!marker && typeof createMarker === 'function') {
+        marker = createMarker([startLat, startLng]);
+    } else if (!marker && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+        marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
+    }
+
+    if (Math.abs(startLat - destLat) < 0.000001 && Math.abs(startLng - destLng) < 0.000001) {
+        return;
+    }
+
+    const routeCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
+
+    clearNavRoute();
+    if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
+        window.navRoutePolyline = L.polyline(routeCoords, {
+            color: '#007bff',
+            weight: 5,
+            opacity: 0.8,
+            lineJoin: 'round'
+        }).addTo(map);
+    }
+
+    // Automatically exit targeting mode upon starting navigation
+    toggleAutoNavMode(false, true);
+
+    const speed = getCurrentSpeed();
+    return startNavigation(routeCoords, speed);
+}
+window.handleAutoNavMapClick = handleAutoNavMapClick;
+
+// Helper to check if an element or activeElement is interactive
+function isInteractiveElement(target) {
+    const el = target || document.activeElement;
+    if (!el) return false;
+    const tagName = (el.tagName || '').toUpperCase();
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)) return true;
+    if (el.isContentEditable) return true;
+    return false;
+}
+
+// Map keydown / keyup events to cardinal direction codes: 'w', 'a', 's', 'd'
+function getDirectionFromEvent(e) {
+    const key = (e.key || '').toLowerCase();
+    const code = e.code || '';
+    if (code === 'KeyW' || key === 'w' || code === 'ArrowUp' || key === 'arrowup') {
+        return 'w';
+    }
+    if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft' || key === 'arrowleft') {
+        return 'a';
+    }
+    if (code === 'KeyS' || key === 's' || code === 'ArrowDown' || key === 'arrowdown') {
+        return 's';
+    }
+    if (code === 'KeyD' || key === 'd' || code === 'ArrowRight' || key === 'arrowright') {
+        return 'd';
+    }
+    return null;
+}
+
+// Get the latest active direction from held keys
+function getActiveDirection() {
+    const dirs = Array.from(pressedKeyDirections.values());
+    if (dirs.length === 0) return null;
+    return dirs[dirs.length - 1];
+}
+
+var isMoveStepInFlight = false;
+var pendingMoveStepDir = null;
+var lastDispatchedMoveCoords = null;
+window.lastDispatchedMoveCoords = lastDispatchedMoveCoords;
+
+// Function to perform a single move step via POST /move_step
+function performMoveStep(dir) {
+    if (!dir) return;
+    if (isMoveStepInFlight) {
+        pendingMoveStepDir = dir;
+        return;
+    }
+
+    const speed = getCurrentSpeed();
+    const payload = {
+        direction: dir,
+        speed_kmh: speed
+    };
+
+    // If coordinates are available, provide lat/lng as fallback in case server location is unset
+    let baseCoords = window.lastDispatchedMoveCoords;
+    if (!baseCoords && typeof getCoordinates === 'function') {
+        baseCoords = getCoordinates();
+    }
+    if (baseCoords && typeof baseCoords.lat === 'number' && typeof baseCoords.lng === 'number' && !isNaN(baseCoords.lat) && !isNaN(baseCoords.lng)) {
+        payload.lat = baseCoords.lat;
+        payload.lng = baseCoords.lng;
+    }
+
+    isMoveStepInFlight = true;
+    fetch('/move_step', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('move_step HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
+            window.lastDispatchedMoveCoords = { lat: data.lat, lng: data.lng };
+            updatePositionOnStep(data.lat, data.lng);
+        }
+    })
+    .catch(error => {
+        console.error('Error during move_step:', error);
+    })
+    .finally(() => {
+        isMoveStepInFlight = false;
+        if (pendingMoveStepDir && activeDirection) {
+            const nextDir = pendingMoveStepDir;
+            pendingMoveStepDir = null;
+            performMoveStep(nextDir);
+        } else {
+            pendingMoveStepDir = null;
+        }
+    });
+}
+
+// Update the marker, input fields, and state when step coordinates are received
+function updatePositionOnStep(lat, lng) {
+    window.lastDispatchedMoveCoords = { lat: lat, lng: lng };
+
+    // 1. Update marker on Leaflet map smoothly or create marker if none exists
+    if (!marker || (typeof map !== 'undefined' && map && !map.hasLayer(marker))) {
+        if (typeof createMarker === 'function') {
+            marker = createMarker([lat, lng]);
+        } else if (typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        }
+    } else if (marker && typeof marker.setLatLng === 'function') {
+        marker.setLatLng([lat, lng]);
+    }
+
+    // 2. Camera auto-centering if camera is locked
+    if (window.isCameraLocked && typeof map !== 'undefined' && map && typeof map.panTo === 'function') {
+        map.panTo([lat, lng]);
+    }
+
+    // 3. Update #coordinates text input
+    const coordInput = document.getElementById('coordinates');
+    if (coordInput) {
+        coordInput.value = lat + ', ' + lng;
+    }
+
+    // 3. Update button statuses and setCoordinates state
+    if (typeof updateSetLocationButtonStatus === 'function') {
+        updateSetLocationButtonStatus();
+    }
+    if (typeof updateStopLocationButtonStatus === 'function') {
+        updateStopLocationButtonStatus();
+    }
+    if (typeof setCoordinates === 'function') {
+        setCoordinates(lat, lng);
+    }
+}
+
+// Keydown handler
+function handleKeyDown(event) {
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+    }
+    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
+        return;
+    }
+
+    const dir = getDirectionFromEvent(event);
+    if (!dir) {
+        return;
+    }
+
+    // Prevent default scrolling on arrow keys or directional controls
+    event.preventDefault();
+
+    const keyId = event.code || event.key;
+    if (pressedKeyDirections.has(keyId) || event.repeat) {
+        return;
+    }
+
+    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, route line is cleared, and UI displays a toast ("自動導航已中斷，切換為手動操作").
+    if (window.isNavigating || window.navPollInterval !== null) {
+        stopNavigationStatusPolling();
+        if (typeof clearNavRoute === 'function') {
+            clearNavRoute();
+        }
+        if (typeof displayToast === 'function') {
+            displayToast("自動導航已中斷，切換為手動操作");
+        }
+    }
+
+    pressedKeyDirections.set(keyId, dir);
+    activeDirection = dir;
+
+    // Reset any existing ticker interval
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+
+    // Immediately trigger a step
+    performMoveStep(dir);
+
+    // Continuous 1.0 second (1000ms) interval while held
+    activeMovementInterval = setInterval(function() {
+        if (activeDirection) {
+            performMoveStep(activeDirection);
+        }
+    }, 1000);
+}
+
+// Keyup handler
+function handleKeyUp(event) {
+    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
+        return;
+    }
+
+    const dir = getDirectionFromEvent(event);
+    if (!dir) {
+        return;
+    }
+
+    const keyId = event.code || event.key;
+    pressedKeyDirections.delete(keyId);
+
+    // Clear active interval immediately upon release
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+
+    const nextDir = getActiveDirection();
+    if (nextDir) {
+        activeDirection = nextDir;
+        // Continue in that key's direction
+        performMoveStep(nextDir);
+        activeMovementInterval = setInterval(function() {
+            if (activeDirection) {
+                performMoveStep(activeDirection);
+            }
+        }, 1000);
+    } else {
+        activeDirection = null;
+    }
+}
+
+// Function to immediately stop stepping on blur or navigation cancel
+function stopKeyboardSteering() {
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+    activeDirection = null;
+    pendingMoveStepDir = null;
+    pressedKeyDirections.clear();
+}
+window.stopKeyboardSteering = stopKeyboardSteering;
+window.handleKeyDown = handleKeyDown;
+window.handleKeyUp = handleKeyUp;
+window.performMoveStep = performMoveStep;
+
 
 
 
@@ -2446,9 +3676,11 @@ function continueAfterDeveloperModeRequired() {
     document.getElementById('coordinates').addEventListener('input', updateSetLocationButtonStatus);
     populateDeviceList();
     updateStopLocationButtonStatus();  // Add this line to update the Stop Location button status
-    // Add event listener for keydown event
-    document.addEventListener('keydown', handleKeyDown);
-    console.log("listener loaded");
+    // Add event listeners for keyboard WASD steering on window
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', stopKeyboardSteering);
+    console.log("Keyboard steering listeners loaded");
 
     document.getElementById('search').addEventListener('click', handleSearch);
 
