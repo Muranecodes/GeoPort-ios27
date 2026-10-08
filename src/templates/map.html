@@ -1744,38 +1744,258 @@ function resetPlaybackFlag() {
 
 //============== GPX Playback =============================
 
-// Function to handle keyboard directional key presses
-function handleKeyDown(event) {
-    const stepSize = 0.0001; // Adjust this value as needed
-    const latLng = marker.getLatLng();
-    console.log('key down');
-    let newLatLng;
+//============== Keyboard WASD Steering =============================
 
-    switch (event.key) {
-        case 'ArrowUp':
-            newLatLng = [latLng.lat + stepSize, latLng.lng];
-            console.log("up");
-            break;
-        case 'ArrowDown':
-            newLatLng = [latLng.lat - stepSize, latLng.lng];
-            console.log("down");
-            break;
-        case 'ArrowLeft':
-            newLatLng = [latLng.lat, latLng.lng - stepSize];
-            break;
-        case 'ArrowRight':
-            newLatLng = [latLng.lat, latLng.lng + stepSize];
-            break;
-        default:
-            return; // Do nothing if other keys are pressed
+// Active key state tracking
+const pressedKeyDirections = new Map(); // keyIdentifier -> direction ('w', 'a', 's', 'd')
+let activeMovementInterval = null;
+let activeDirection = null;
+
+// Helper to determine the current speed in km/h (defaults to 5.0 km/h)
+function getCurrentSpeed() {
+    if (typeof window.currentSpeedKmh === 'number' && !isNaN(window.currentSpeedKmh) && window.currentSpeedKmh > 0) {
+        return window.currentSpeedKmh;
+    }
+    const speedInput = document.getElementById('speedInput');
+    if (speedInput && speedInput.value && !isNaN(parseFloat(speedInput.value)) && parseFloat(speedInput.value) > 0) {
+        return parseFloat(speedInput.value);
+    }
+    const customSpeedInput = document.getElementById('customSpeedInput');
+    if (customSpeedInput && customSpeedInput.value && !isNaN(parseFloat(customSpeedInput.value)) && parseFloat(customSpeedInput.value) > 0) {
+        return parseFloat(customSpeedInput.value);
+    }
+    if (typeof velocitySelect !== 'undefined' && velocitySelect !== null) {
+        const parsed = parseFloat(velocitySelect);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+        const speedPresets = {
+            'walk': 5.0,
+            'run': 12.0,
+            'ride': 20.0,
+            'bike': 20.0,
+            'drive': 60.0
+        };
+        if (typeof speedPresets[velocitySelect] === 'number') {
+            return speedPresets[velocitySelect];
+        }
+    }
+    return 5.0;
+}
+window.getCurrentSpeed = getCurrentSpeed;
+
+// Helper to check if an element or activeElement is interactive
+function isInteractiveElement(target) {
+    const el = target || document.activeElement;
+    if (!el) return false;
+    const tagName = (el.tagName || '').toUpperCase();
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)) return true;
+    if (el.isContentEditable) return true;
+    return false;
+}
+
+// Map keydown / keyup events to cardinal direction codes: 'w', 'a', 's', 'd'
+function getDirectionFromEvent(e) {
+    const key = (e.key || '').toLowerCase();
+    const code = e.code || '';
+    if (code === 'KeyW' || key === 'w' || code === 'ArrowUp' || key === 'arrowup') {
+        return 'w';
+    }
+    if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft' || key === 'arrowleft') {
+        return 'a';
+    }
+    if (code === 'KeyS' || key === 's' || code === 'ArrowDown' || key === 'arrowdown') {
+        return 's';
+    }
+    if (code === 'KeyD' || key === 'd' || code === 'ArrowRight' || key === 'arrowright') {
+        return 'd';
+    }
+    return null;
+}
+
+// Get the latest active direction from held keys
+function getActiveDirection() {
+    const dirs = Array.from(pressedKeyDirections.values());
+    if (dirs.length === 0) return null;
+    return dirs[dirs.length - 1];
+}
+
+// Function to perform a single move step via POST /move_step
+function performMoveStep(dir) {
+    if (!dir) return;
+    const speed = getCurrentSpeed();
+    const payload = {
+        direction: dir,
+        speed_kmh: speed
+    };
+
+    // If marker exists, provide lat/lng as fallback in case server location is unset
+    if (marker && typeof marker.getLatLng === 'function') {
+        const curLatLng = marker.getLatLng();
+        if (curLatLng && !isNaN(curLatLng.lat) && !isNaN(curLatLng.lng)) {
+            payload.lat = curLatLng.lat;
+            payload.lng = curLatLng.lng;
+        }
+    } else {
+        const coordInput = document.getElementById('coordinates');
+        if (coordInput && coordInput.value) {
+            const parts = coordInput.value.split(',');
+            if (parts.length === 2) {
+                const parsedLat = parseFloat(parts[0].trim());
+                const parsedLng = parseFloat(parts[1].trim());
+                if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+                    payload.lat = parsedLat;
+                    payload.lng = parsedLng;
+                }
+            }
+        }
     }
 
-    marker.setLatLng(newLatLng);
-    setLocationArrows();
-    setCoordinates(newLatLng[0], newLatLng[1]);
-
-    event.preventDefault(); // Prevent default behavior of arrow key presses
+    fetch('/move_step', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('move_step HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
+            updatePositionOnStep(data.lat, data.lng);
+        }
+    })
+    .catch(error => {
+        console.error('Error during move_step:', error);
+    });
 }
+
+// Update the marker, input fields, and state when step coordinates are received
+function updatePositionOnStep(lat, lng) {
+    // 1. Update marker on Leaflet map smoothly or create marker if none exists
+    if (!marker || (typeof map !== 'undefined' && map && !map.hasLayer(marker))) {
+        if (typeof createMarker === 'function') {
+            marker = createMarker([lat, lng]);
+        } else if (typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        }
+    } else if (marker && typeof marker.setLatLng === 'function') {
+        marker.setLatLng([lat, lng]);
+    }
+
+    // 2. Update #coordinates text input
+    const coordInput = document.getElementById('coordinates');
+    if (coordInput) {
+        coordInput.value = lat + ', ' + lng;
+    }
+
+    // 3. Update button statuses and setCoordinates state
+    if (typeof updateSetLocationButtonStatus === 'function') {
+        updateSetLocationButtonStatus();
+    }
+    if (typeof updateStopLocationButtonStatus === 'function') {
+        updateStopLocationButtonStatus();
+    }
+    if (typeof setCoordinates === 'function') {
+        setCoordinates(lat, lng);
+    }
+}
+
+// Keydown handler
+function handleKeyDown(event) {
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+    }
+    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
+        return;
+    }
+
+    const dir = getDirectionFromEvent(event);
+    if (!dir) {
+        return;
+    }
+
+    // Prevent default scrolling on arrow keys or directional controls
+    event.preventDefault();
+
+    const keyId = event.code || event.key;
+    if (pressedKeyDirections.has(keyId) || event.repeat) {
+        return;
+    }
+
+    pressedKeyDirections.set(keyId, dir);
+    activeDirection = dir;
+
+    // Reset any existing ticker interval
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+
+    // Immediately trigger a step
+    performMoveStep(dir);
+
+    // Continuous 1.0 second (1000ms) interval while held
+    activeMovementInterval = setInterval(function() {
+        if (activeDirection) {
+            performMoveStep(activeDirection);
+        }
+    }, 1000);
+}
+
+// Keyup handler
+function handleKeyUp(event) {
+    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
+        return;
+    }
+
+    const dir = getDirectionFromEvent(event);
+    if (!dir) {
+        return;
+    }
+
+    const keyId = event.code || event.key;
+    pressedKeyDirections.delete(keyId);
+
+    // Clear active interval immediately upon release
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+
+    const nextDir = getActiveDirection();
+    if (nextDir) {
+        activeDirection = nextDir;
+        // Continue in that key's direction
+        performMoveStep(nextDir);
+        activeMovementInterval = setInterval(function() {
+            if (activeDirection) {
+                performMoveStep(activeDirection);
+            }
+        }, 1000);
+    } else {
+        activeDirection = null;
+    }
+}
+
+// Function to immediately stop stepping on blur or navigation cancel
+function stopKeyboardSteering() {
+    if (activeMovementInterval) {
+        clearInterval(activeMovementInterval);
+        activeMovementInterval = null;
+    }
+    activeDirection = null;
+    pressedKeyDirections.clear();
+}
+window.stopKeyboardSteering = stopKeyboardSteering;
+window.handleKeyDown = handleKeyDown;
+window.handleKeyUp = handleKeyUp;
+window.performMoveStep = performMoveStep;
+
 
 
 
@@ -2446,9 +2666,11 @@ function continueAfterDeveloperModeRequired() {
     document.getElementById('coordinates').addEventListener('input', updateSetLocationButtonStatus);
     populateDeviceList();
     updateStopLocationButtonStatus();  // Add this line to update the Stop Location button status
-    // Add event listener for keydown event
-    document.addEventListener('keydown', handleKeyDown);
-    console.log("listener loaded");
+    // Add event listeners for keyboard WASD steering on window
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', stopKeyboardSteering);
+    console.log("Keyboard steering listeners loaded");
 
     document.getElementById('search').addEventListener('click', handleSearch);
 
