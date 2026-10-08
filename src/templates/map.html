@@ -233,6 +233,23 @@ body.dark-mode .modal-footer button {
     padding: 4px; /* Adjust padding as needed */
 }
 
+/* Active state for toolbar buttons (Auto Nav, Camera Tracking, Draw Track) */
+.leaflet-bar button.active,
+.leaflet-control-filelayer-custom.active,
+.easy-button-button.active,
+#autoNavButton.active,
+#cameraFollowButton.active {
+    background-color: #007bff !important;
+    color: #ffffff !important;
+}
+.leaflet-bar button.active i,
+.leaflet-control-filelayer-custom.active i,
+.easy-button-button.active i,
+#autoNavButton.active i,
+#cameraFollowButton.active i {
+    color: #ffffff !important;
+}
+
 /* Speed Control Widget Styles */
 .speed-control-widget {
     background: #ffffff;
@@ -945,6 +962,16 @@ async function initializeMap(userLocale) {
     await searchLocation(userLocale);
 
     map.on('dblclick', handleMapDoubleClick);
+    map.on('click', function(e) {
+        if (window.isAutoNavMode) {
+            handleAutoNavMapClick(e);
+        }
+    });
+    map.on('dragstart', function() {
+        if (window.isCameraLocked) {
+            setCameraLock(false);
+        }
+    });
 
     // Set the zoom level to 4
     map.setZoom(4);
@@ -1272,6 +1299,57 @@ fileLayerControlContainer.appendChild(drawPolylineButton.button);
 // Add the custom class to the EasyButton's container element
 drawPolylineButton.button.classList.add('leaflet-control-filelayer-custom');
 
+// Create Auto Navigation button using EasyButton
+var autoNavButton = L.easyButton({
+    id: 'autoNavButton',
+    states: [{
+        stateName: 'auto-nav',
+        icon: '<i class="lni lni-direction-alt"></i>',
+        title: 'Auto Navigation',
+        onClick: function(btn, map) {
+            toggleAutoNavMode();
+        }
+    }]
+});
+autoNavButton.button.id = 'autoNavButton';
+autoNavButton.button.style.fontSize = '24px';
+autoNavButton.button.style.paddingLeft = '4px';
+autoNavButton.addTo(map);
+
+if (fileLayerControlContainer) {
+    fileLayerControlContainer.appendChild(autoNavButton.button);
+}
+autoNavButton.button.classList.add('leaflet-control-filelayer-custom');
+autoNavButton.button.onclick = function() {
+    toggleAutoNavMode();
+};
+
+// Create Camera Follow button using EasyButton
+var cameraFollowButton = L.easyButton({
+    id: 'cameraFollowButton',
+    states: [{
+        stateName: 'camera-follow',
+        icon: '<i class="lni lni-target"></i>',
+        title: 'Camera Tracking (Locked)',
+        onClick: function(btn, map) {
+            toggleCameraLock();
+        }
+    }]
+});
+cameraFollowButton.button.id = 'cameraFollowButton';
+cameraFollowButton.button.style.fontSize = '24px';
+cameraFollowButton.button.style.paddingLeft = '4px';
+cameraFollowButton.addTo(map);
+
+if (fileLayerControlContainer) {
+    fileLayerControlContainer.appendChild(cameraFollowButton.button);
+}
+cameraFollowButton.button.classList.add('leaflet-control-filelayer-custom');
+cameraFollowButton.button.classList.add('active'); // Default state is locked
+cameraFollowButton.button.onclick = function() {
+    toggleCameraLock();
+};
+
 //===========
 
 // Define the validateInput function
@@ -1442,6 +1520,9 @@ customButton.onclick = function() {
     isPlaybackStopped = true; // Stop playback if active
     playbackIndex = 0;
     console.log("Trash: isPlaybackStopped", isPlaybackStopped);
+    if (typeof clearNavRoute === 'function') {
+        clearNavRoute();
+    }
 
     // Hide the textbox
     var textbox = document.getElementById('timeToPointText');
@@ -1642,6 +1723,7 @@ function createMarker(latlng) {
 
 // Function to create a new marker on double click
 function handleMapDoubleClick(e) {
+    if (window.isAutoNavMode) return;
     // Disable double-click zooming
     map.doubleClickZoom.disable();
     if (!marker)
@@ -2316,12 +2398,14 @@ function fetchNavigationStatus() {
                     (data.current_lat !== 0 || data.current_lng !== 0)) {
                     updatePositionOnStep(data.current_lat, data.current_lng);
                 }
+                clearNavRoute();
                 if (typeof displayToast === 'function') {
                     displayToast("已到達目的地");
                 }
             } else {
                 // Stopped externally
                 stopNavigationStatusPolling();
+                clearNavRoute();
             }
             return data;
         })
@@ -2357,6 +2441,7 @@ function stopNavigationStatusPolling() {
 }
 
 function stopNavigation() {
+    clearNavRoute();
     return fetch('/stop_navigation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -2364,6 +2449,7 @@ function stopNavigation() {
     .then(response => response.json())
     .then(data => {
         stopNavigationStatusPolling();
+        clearNavRoute();
         if (data && data.current_location &&
             typeof data.current_location.lat === 'number' &&
             typeof data.current_location.lng === 'number' &&
@@ -2375,6 +2461,7 @@ function stopNavigation() {
     .catch(err => {
         console.error('Error stopping navigation:', err);
         stopNavigationStatusPolling();
+        clearNavRoute();
     });
 }
 
@@ -2452,6 +2539,206 @@ window.formatNavDistance = formatNavDistance;
 window.formatNavTime = formatNavTime;
 window.updateNavHud = updateNavHud;
 window.fetchNavigationStatus = fetchNavigationStatus;
+
+//============== Auto Navigation Mode & Camera Tracking (Ticket 05) =============================
+window.isAutoNavMode = false;
+window.isCameraLocked = true;
+window.navRoutePolyline = null;
+
+function getCoordinates() {
+    if (marker && typeof marker.getLatLng === 'function') {
+        const curLatLng = marker.getLatLng();
+        if (curLatLng && !isNaN(curLatLng.lat) && !isNaN(curLatLng.lng)) {
+            return { lat: curLatLng.lat, lng: curLatLng.lng };
+        }
+    }
+    const coordInput = document.getElementById('coordinates');
+    if (coordInput && coordInput.value) {
+        const parts = coordInput.value.split(',');
+        if (parts.length === 2) {
+            const parsedLat = parseFloat(parts[0].trim());
+            const parsedLng = parseFloat(parts[1].trim());
+            if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+                return { lat: parsedLat, lng: parsedLng };
+            }
+        }
+    }
+    if (typeof map !== 'undefined' && map && typeof map.getCenter === 'function') {
+        const center = map.getCenter();
+        if (center && !isNaN(center.lat) && !isNaN(center.lng)) {
+            return { lat: center.lat, lng: center.lng };
+        }
+    }
+    return null;
+}
+window.getCoordinates = getCoordinates;
+
+function toggleAutoNavMode(forceState) {
+    if (typeof forceState === 'boolean') {
+        window.isAutoNavMode = forceState;
+    } else {
+        window.isAutoNavMode = !window.isAutoNavMode;
+    }
+
+    const btn = document.getElementById('autoNavButton');
+    const mapContainer = (typeof map !== 'undefined' && map && typeof map.getContainer === 'function') ? map.getContainer() : document.getElementById('map');
+
+    if (window.isAutoNavMode) {
+        if (btn) {
+            btn.classList.add('active');
+            btn.title = 'Auto Navigation (Active)';
+        }
+        if (mapContainer && mapContainer.style) {
+            mapContainer.style.cursor = 'crosshair';
+        }
+        if (typeof displayToast === 'function') {
+            displayToast("自動導航模式已開啟：請點擊地圖目的地出發");
+        }
+    } else {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.title = 'Auto Navigation';
+        }
+        if (mapContainer && mapContainer.style) {
+            mapContainer.style.cursor = '';
+        }
+        if (typeof displayToast === 'function') {
+            displayToast("自動導航模式已關閉");
+        }
+    }
+    return window.isAutoNavMode;
+}
+window.toggleAutoNavMode = toggleAutoNavMode;
+
+function setCameraLock(locked) {
+    window.isCameraLocked = !!locked;
+    const btn = document.getElementById('cameraFollowButton');
+    if (btn) {
+        if (window.isCameraLocked) {
+            btn.classList.add('active');
+            btn.title = 'Camera Tracking (Locked)';
+        } else {
+            btn.classList.remove('active');
+            btn.title = 'Camera Tracking (Unlocked)';
+        }
+    }
+    return window.isCameraLocked;
+}
+window.setCameraLock = setCameraLock;
+
+function toggleCameraLock() {
+    const newState = setCameraLock(!window.isCameraLocked);
+    if (newState) {
+        const coords = getCoordinates();
+        if (coords && typeof map !== 'undefined' && map && typeof map.panTo === 'function') {
+            map.panTo([coords.lat, coords.lng]);
+        }
+    }
+    return newState;
+}
+window.toggleCameraLock = toggleCameraLock;
+
+function buildOsrmFootRouteUrl(startLat, startLng, destLat, destLng) {
+    return `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+}
+window.buildOsrmFootRouteUrl = buildOsrmFootRouteUrl;
+
+function parseOsrmRouteGeometry(osrmData) {
+    if (osrmData &&
+        (osrmData.code === 'Ok' || osrmData.code === 'ok') &&
+        Array.isArray(osrmData.routes) &&
+        osrmData.routes.length > 0 &&
+        osrmData.routes[0].geometry &&
+        Array.isArray(osrmData.routes[0].geometry.coordinates) &&
+        osrmData.routes[0].geometry.coordinates.length > 0) {
+        return osrmData.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    }
+    return null;
+}
+window.parseOsrmRouteGeometry = parseOsrmRouteGeometry;
+
+function getFallbackRoute(startLat, startLng, destLat, destLng) {
+    return [[startLat, startLng], [destLat, destLng]];
+}
+window.getFallbackRoute = getFallbackRoute;
+
+async function fetchOsrmRoute(startLat, startLng, destLat, destLng, timeoutMs = 5000) {
+    const url = buildOsrmFootRouteUrl(startLat, startLng, destLat, destLng);
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) {
+            console.warn('OSRM request failed with HTTP status', res.status);
+            return getFallbackRoute(startLat, startLng, destLat, destLng);
+        }
+        const data = await res.json();
+        const coords = parseOsrmRouteGeometry(data);
+        if (coords && coords.length >= 2) {
+            return coords;
+        }
+        return getFallbackRoute(startLat, startLng, destLat, destLng);
+    } catch (err) {
+        console.warn('OSRM routing failed or timed out, falling back to direct line:', err);
+        return getFallbackRoute(startLat, startLng, destLat, destLng);
+    }
+}
+window.fetchOsrmRoute = fetchOsrmRoute;
+
+function clearNavRoute() {
+    if (window.navRoutePolyline) {
+        if (typeof map !== 'undefined' && map && map.hasLayer(window.navRoutePolyline)) {
+            map.removeLayer(window.navRoutePolyline);
+        }
+        window.navRoutePolyline = null;
+    }
+}
+window.clearNavRoute = clearNavRoute;
+
+async function handleAutoNavMapClick(e) {
+    if (!window.isAutoNavMode) return;
+    if (!e || !e.latlng) return;
+
+    const destLat = e.latlng.lat;
+    const destLng = e.latlng.lng;
+
+    const startCoords = getCoordinates();
+    let startLat, startLng;
+    if (startCoords && typeof startCoords.lat === 'number' && typeof startCoords.lng === 'number') {
+        startLat = startCoords.lat;
+        startLng = startCoords.lng;
+    } else {
+        startLat = destLat;
+        startLng = destLng;
+    }
+
+    if (!marker && typeof createMarker === 'function') {
+        marker = createMarker([startLat, startLng]);
+    } else if (!marker && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+        marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
+    }
+
+    if (Math.abs(startLat - destLat) < 0.000001 && Math.abs(startLng - destLng) < 0.000001) {
+        return;
+    }
+
+    const routeCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
+
+    clearNavRoute();
+    if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
+        window.navRoutePolyline = L.polyline(routeCoords, {
+            color: '#007bff',
+            weight: 5,
+            opacity: 0.8,
+            lineJoin: 'round'
+        }).addTo(map);
+    }
+
+    const speed = getCurrentSpeed();
+    return startNavigation(routeCoords, speed);
+}
+window.handleAutoNavMapClick = handleAutoNavMapClick;
 
 // Helper to check if an element or activeElement is interactive
 function isInteractiveElement(target) {
@@ -2556,7 +2843,12 @@ function updatePositionOnStep(lat, lng) {
         marker.setLatLng([lat, lng]);
     }
 
-    // 2. Update #coordinates text input
+    // 2. Camera auto-centering if camera is locked
+    if (window.isCameraLocked && typeof map !== 'undefined' && map && typeof map.panTo === 'function') {
+        map.panTo([lat, lng]);
+    }
+
+    // 3. Update #coordinates text input
     const coordInput = document.getElementById('coordinates');
     if (coordInput) {
         coordInput.value = lat + ', ' + lng;
