@@ -106,3 +106,64 @@ def calculate_step(
     distance_meters = (speed_kmh / 3.6) * duration_seconds
     new_lat, new_lng = destination_point(lat, lng, bearing, distance_meters)
     return new_lat, new_lng, distance_meters
+
+
+def calculate_bearing(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """
+    Calculates initial compass bearing in degrees (0° - 360°) from (lat1, lng1) to (lat2, lng2).
+    0° = North, 90° = East, 180° = South, 270° = West.
+    """
+    if lat1 == lat2 and lng1 == lng2:
+        return 0.0
+
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_lambda = math.radians(lng2 - lng1)
+
+    y = math.sin(delta_lambda) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(delta_lambda)
+
+    bearing_rad = math.atan2(y, x)
+    return (math.degrees(bearing_rad) + 360.0) % 360.0
+
+
+def calculate_polyline_distance(waypoints: list) -> float:
+    """
+    Calculates total great-circle distance along polyline waypoints in meters.
+    """
+    if not waypoints or len(waypoints) < 2:
+        return 0.0
+    total = 0.0
+    for i in range(len(waypoints) - 1):
+        total += haversine_distance(
+            float(waypoints[i][0]), float(waypoints[i][1]),
+            float(waypoints[i + 1][0]), float(waypoints[i + 1][1])
+        )
+    return total
+
+
+def interpolate_polyline(waypoints: list, distance_meters: float) -> Tuple[float, float]:
+    """
+    Interpolates a coordinate at distance_meters along the polyline.
+    If distance_meters <= 0, returns the first waypoint.
+    If distance_meters >= total_distance, returns the final waypoint.
+    """
+    if not waypoints:
+        raise ValueError("Waypoints list cannot be empty")
+    if len(waypoints) == 1 or distance_meters <= 0:
+        return float(waypoints[0][0]), float(waypoints[0][1])
+
+    remaining = float(distance_meters)
+    for i in range(len(waypoints) - 1):
+        p1 = (float(waypoints[i][0]), float(waypoints[i][1]))
+        p2 = (float(waypoints[i + 1][0]), float(waypoints[i + 1][1]))
+        seg_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
+        if seg_dist <= 0:
+            continue
+        if remaining <= seg_dist:
+            bearing = calculate_bearing(p1[0], p1[1], p2[0], p2[1])
+            return destination_point(p1[0], p1[1], bearing, remaining)
+        remaining -= seg_dist
+
+    return float(waypoints[-1][0]), float(waypoints[-1][1])
+

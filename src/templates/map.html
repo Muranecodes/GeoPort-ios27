@@ -367,6 +367,88 @@ body.dark-mode .speed-unit {
     color: #aaa;
 }
 
+/* Navigation HUD Styles */
+.navigation-hud {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    z-index: 1000;
+    user-select: none;
+    min-width: 250px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+body.dark-mode .navigation-hud {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border-color: #555;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .navigation-hud .card-body {
+    background: #2b2b2b;
+    color: #e0e0e0;
+}
+
+.navigation-hud-header {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+}
+
+body.dark-mode .navigation-hud-header {
+    color: #f0f0f0;
+}
+
+.hud-stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    background: #f8f9fa;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+body.dark-mode .hud-stats-row {
+    background: #222222;
+    border-color: #444;
+}
+
+.hud-stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.hud-stat-label {
+    display: block;
+    font-size: 10px;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+body.dark-mode .hud-stat-label {
+    color: #aaa;
+}
+
+.hud-stat-value {
+    font-weight: 600;
+    font-size: 12px;
+    color: #212529;
+}
+
+body.dark-mode .hud-stat-value {
+    color: #fff;
+}
+
+.hud-actions {
+    display: flex;
+    gap: 6px;
+}
+
     </style>
 </head>
 
@@ -526,6 +608,34 @@ body.dark-mode .speed-unit {
 			<div class="speed-number-wrap">
 				<input type="number" class="form-control form-control-sm" id="speedNumberInput" min="0.1" max="200" step="0.5" value="5" title="Speed in km/h">
 				<span class="speed-unit">km/h</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Navigation HUD Floating Panel -->
+	<div id="navigationHud" class="navigation-hud card mb-2" style="display: none;">
+		<div class="card-body p-2">
+			<div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
+				<span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
+				<span id="navStatusBadge" class="badge badge-success">運行中</span>
+			</div>
+			<div class="hud-stats-row mb-2">
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">速度</span>
+					<span id="navHudSpeed" class="hud-stat-value">5.0 km/h</span>
+				</div>
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">剩餘距離</span>
+					<span id="navHudDistance" class="hud-stat-value">0 m</span>
+				</div>
+				<div class="hud-stat-item">
+					<span class="hud-stat-label">預計抵達</span>
+					<span id="navHudEta" class="hud-stat-value">0s</span>
+				</div>
+			</div>
+			<div class="hud-actions d-flex gap-2">
+				<button type="button" id="navPauseResumeBtn" class="btn btn-sm btn-outline-warning flex-fill" onclick="toggleNavPause()">暫停</button>
+				<button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" onclick="stopNavigation()">停止導航</button>
 			</div>
 		</div>
 	</div>
@@ -888,6 +998,21 @@ async function initializeMap(userLocale) {
         }
     });
     new SpeedControl().addTo(map);
+
+    // Add Navigation HUD to Leaflet map
+    var NavigationHudControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function(mapInstance) {
+            var hud = document.getElementById('navigationHud');
+            if (hud) {
+                L.DomEvent.disableClickPropagation(hud);
+                L.DomEvent.disableScrollPropagation(hud);
+                return hud;
+            }
+            return L.DomUtil.create('div');
+        }
+    });
+    new NavigationHudControl().addTo(map);
 
 
 
@@ -2090,6 +2215,244 @@ function getCurrentSpeed() {
 }
 window.getCurrentSpeed = getCurrentSpeed;
 
+//============== Navigation Engine & HUD Management =============================
+window.isNavigating = false;
+window.navPollInterval = null;
+window.navPaused = false;
+
+function formatNavDistance(meters) {
+    if (typeof meters !== 'number' || isNaN(meters)) return '0 m';
+    if (meters >= 1000) {
+        return (meters / 1000).toFixed(2) + ' km';
+    }
+    return Math.round(meters) + ' m';
+}
+
+function formatNavTime(seconds) {
+    if (typeof seconds !== 'number' || isNaN(seconds) || seconds <= 0) return '0s';
+    if (seconds >= 3600) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return h + 'h ' + m + 'm';
+    }
+    if (seconds >= 60) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.round(seconds % 60);
+        return m + 'm ' + s + 's';
+    }
+    return Math.round(seconds) + 's';
+}
+
+function updateNavHud(data) {
+    const hud = document.getElementById('navigationHud');
+    if (!hud) return;
+
+    const speedEl = document.getElementById('navHudSpeed');
+    const distEl = document.getElementById('navHudDistance');
+    const etaEl = document.getElementById('navHudEta');
+    const statusBadge = document.getElementById('navStatusBadge');
+    const pauseBtn = document.getElementById('navPauseResumeBtn');
+
+    if (speedEl && typeof data.speed_kmh === 'number') {
+        speedEl.textContent = data.speed_kmh.toFixed(1) + ' km/h';
+    }
+    if (distEl && typeof data.remaining_distance_m === 'number') {
+        distEl.textContent = formatNavDistance(data.remaining_distance_m);
+    }
+    if (etaEl && typeof data.remaining_time_s === 'number') {
+        etaEl.textContent = formatNavTime(data.remaining_time_s);
+    }
+    if (statusBadge) {
+        if (data.paused) {
+            statusBadge.className = 'badge badge-warning';
+            statusBadge.textContent = '已暫停';
+        } else {
+            statusBadge.className = 'badge badge-success';
+            statusBadge.textContent = '運行中';
+        }
+    }
+    if (pauseBtn) {
+        pauseBtn.textContent = data.paused ? '繼續' : '暫停';
+        if (data.paused) {
+            pauseBtn.classList.remove('btn-outline-warning');
+            pauseBtn.classList.add('btn-outline-success');
+        } else {
+            pauseBtn.classList.remove('btn-outline-success');
+            pauseBtn.classList.add('btn-outline-warning');
+        }
+    }
+}
+
+function fetchNavigationStatus() {
+    return fetch('/navigation_status')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('navigation_status HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+
+            window.navPaused = !!data.paused;
+
+            if (data.active) {
+                window.isNavigating = true;
+                const hud = document.getElementById('navigationHud');
+                if (hud && hud.style.display === 'none') {
+                    hud.style.display = 'block';
+                }
+                updateNavHud(data);
+
+                // Update marker position and coordinates smoothly
+                if (typeof data.current_lat === 'number' && typeof data.current_lng === 'number' &&
+                    (data.current_lat !== 0 || data.current_lng !== 0)) {
+                    updatePositionOnStep(data.current_lat, data.current_lng);
+                }
+            } else if (data.completed) {
+                // Arrived at destination!
+                stopNavigationStatusPolling();
+                if (typeof data.current_lat === 'number' && typeof data.current_lng === 'number' &&
+                    (data.current_lat !== 0 || data.current_lng !== 0)) {
+                    updatePositionOnStep(data.current_lat, data.current_lng);
+                }
+                if (typeof displayToast === 'function') {
+                    displayToast("已到達目的地");
+                }
+            } else {
+                // Stopped externally
+                stopNavigationStatusPolling();
+            }
+            return data;
+        })
+        .catch(err => {
+            console.error('Error fetching navigation status:', err);
+        });
+}
+
+function startNavigationStatusPolling() {
+    if (window.navPollInterval) {
+        clearInterval(window.navPollInterval);
+    }
+    window.isNavigating = true;
+    const hud = document.getElementById('navigationHud');
+    if (hud) {
+        hud.style.display = 'block';
+    }
+    fetchNavigationStatus();
+    window.navPollInterval = setInterval(fetchNavigationStatus, 1000);
+}
+
+function stopNavigationStatusPolling() {
+    if (window.navPollInterval) {
+        clearInterval(window.navPollInterval);
+        window.navPollInterval = null;
+    }
+    window.isNavigating = false;
+    window.navPaused = false;
+    const hud = document.getElementById('navigationHud');
+    if (hud) {
+        hud.style.display = 'none';
+    }
+}
+
+function stopNavigation() {
+    return fetch('/stop_navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        stopNavigationStatusPolling();
+        if (data && data.current_location &&
+            typeof data.current_location.lat === 'number' &&
+            typeof data.current_location.lng === 'number' &&
+            (data.current_location.lat !== 0 || data.current_location.lng !== 0)) {
+            updatePositionOnStep(data.current_location.lat, data.current_location.lng);
+        }
+        return data;
+    })
+    .catch(err => {
+        console.error('Error stopping navigation:', err);
+        stopNavigationStatusPolling();
+    });
+}
+
+function toggleNavPause() {
+    const endpoint = window.navPaused ? '/resume_navigation' : '/pause_navigation';
+    return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        window.navPaused = !window.navPaused;
+        const pauseBtn = document.getElementById('navPauseResumeBtn');
+        const statusBadge = document.getElementById('navStatusBadge');
+        if (pauseBtn) {
+            pauseBtn.textContent = window.navPaused ? '繼續' : '暫停';
+            if (window.navPaused) {
+                pauseBtn.classList.remove('btn-outline-warning');
+                pauseBtn.classList.add('btn-outline-success');
+            } else {
+                pauseBtn.classList.remove('btn-outline-success');
+                pauseBtn.classList.add('btn-outline-warning');
+            }
+        }
+        if (statusBadge) {
+            statusBadge.textContent = window.navPaused ? '已暫停' : '運行中';
+            statusBadge.className = window.navPaused ? 'badge badge-warning' : 'badge badge-success';
+        }
+        return data;
+    })
+    .catch(err => {
+        console.error('Error toggling nav pause:', err);
+    });
+}
+
+function startNavigation(waypoints, speed) {
+    if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
+        if (typeof displayToast === 'function') {
+            displayToast("導航路徑至少需要2個座標點");
+        }
+        return Promise.reject(new Error("Waypoints must have at least 2 points"));
+    }
+    const speedKmh = (typeof speed === 'number' && speed > 0) ? speed : getCurrentSpeed();
+    return fetch('/start_navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            waypoints: waypoints,
+            speed_kmh: speedKmh
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('start_navigation HTTP ' + res.status);
+        return res.json();
+    })
+    .then(data => {
+        startNavigationStatusPolling();
+        return data;
+    })
+    .catch(err => {
+        console.error('Error starting navigation:', err);
+        if (typeof displayToast === 'function') {
+            displayToast("啟動導航失敗: " + err.message);
+        }
+        throw err;
+    });
+}
+
+window.startNavigation = startNavigation;
+window.stopNavigation = stopNavigation;
+window.toggleNavPause = toggleNavPause;
+window.startNavigationStatusPolling = startNavigationStatusPolling;
+window.stopNavigationStatusPolling = stopNavigationStatusPolling;
+window.formatNavDistance = formatNavDistance;
+window.formatNavTime = formatNavTime;
+window.updateNavHud = updateNavHud;
+window.fetchNavigationStatus = fetchNavigationStatus;
+
 // Helper to check if an element or activeElement is interactive
 function isInteractiveElement(target) {
     const el = target || document.activeElement;
@@ -2231,6 +2594,14 @@ function handleKeyDown(event) {
     const keyId = event.code || event.key;
     if (pressedKeyDirections.has(keyId) || event.repeat) {
         return;
+    }
+
+    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, and UI displays a toast ("自動導航已中斷，切換為手動操作").
+    if (window.isNavigating || window.navPollInterval !== null) {
+        stopNavigationStatusPolling();
+        if (typeof displayToast === 'function') {
+            displayToast("自動導航已中斷，切換為手動操作");
+        }
     }
 
     pressedKeyDirections.set(keyId, dir);

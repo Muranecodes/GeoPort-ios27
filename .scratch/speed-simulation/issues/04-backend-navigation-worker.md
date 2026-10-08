@@ -4,12 +4,12 @@
 
 **Blocked by:** 03: 時速控制面板與動態調速
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Implement `POST /start_navigation` accepting a list of coordinate waypoints `[[lat, lng], ...]` and `speed_kmh`.
-- [ ] Implement a background thread worker that ticks every 1.0 second, interpolating distance along the polyline path and sending coordinates to `LocationSink`.
-- [ ] Implement `POST /stop_navigation`, `POST /pause_navigation`, `POST /resume_navigation`, and `GET /navigation_status`.
-- [ ] When reaching the final waypoint within stepping tolerance, automatically halt navigation and mark status as completed.
-- [ ] Render a floating HUD on the map displaying active speed, remaining distance, ETA, pause/resume button, and stop button.
-- [ ] When the user presses any WASD manual key while navigation is running, automatically cancel the navigation worker and transition seamlessly to manual steering.
-- [ ] Add automated tests for route interpolation, state transitions, ETA calculations, and manual interruption.
+- [x] Implement `POST /start_navigation` accepting a list of coordinate waypoints `[[lat, lng], ...]` and `speed_kmh`.
+- [x] Implement a background thread worker that ticks every 1.0 second, interpolating distance along the polyline path and sending coordinates to `LocationSink`.
+- [x] Implement `POST /stop_navigation`, `POST /pause_navigation`, `POST /resume_navigation`, and `GET /navigation_status`.
+- [x] When reaching the final waypoint within stepping tolerance, automatically halt navigation and mark status as completed.
+- [x] Render a floating HUD on the map displaying active speed, remaining distance, ETA, pause/resume button, and stop button.
+- [x] When the user presses any WASD manual key while navigation is running, automatically cancel the navigation worker and transition seamlessly to manual steering.
+- [x] Add automated tests for route interpolation, state transitions, ETA calculations, and manual interruption.
