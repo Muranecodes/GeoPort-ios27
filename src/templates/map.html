@@ -1331,9 +1331,6 @@ if (fileLayerControlContainer) {
     fileLayerControlContainer.appendChild(autoNavButton.button);
 }
 autoNavButton.button.classList.add('leaflet-control-filelayer-custom');
-autoNavButton.button.onclick = function() {
-    toggleAutoNavMode();
-};
 
 // Create Camera Follow button using EasyButton
 var cameraFollowButton = L.easyButton({
@@ -1357,9 +1354,6 @@ if (fileLayerControlContainer) {
 }
 cameraFollowButton.button.classList.add('leaflet-control-filelayer-custom');
 cameraFollowButton.button.classList.add('active'); // Default state is locked
-cameraFollowButton.button.onclick = function() {
-    toggleCameraLock();
-};
 
 //===========
 
@@ -2587,7 +2581,7 @@ function getCoordinates() {
 }
 window.getCoordinates = getCoordinates;
 
-function toggleAutoNavMode(forceState) {
+function toggleAutoNavMode(forceState, suppressToast = false) {
     if (typeof forceState === 'boolean') {
         window.isAutoNavMode = forceState;
     } else {
@@ -2605,7 +2599,7 @@ function toggleAutoNavMode(forceState) {
         if (mapContainer && mapContainer.style) {
             mapContainer.style.cursor = 'crosshair';
         }
-        if (typeof displayToast === 'function') {
+        if (!suppressToast && typeof displayToast === 'function') {
             displayToast("自動導航模式已開啟：請點擊地圖目的地出發");
         }
     } else {
@@ -2616,7 +2610,7 @@ function toggleAutoNavMode(forceState) {
         if (mapContainer && mapContainer.style) {
             mapContainer.style.cursor = '';
         }
-        if (typeof displayToast === 'function') {
+        if (!suppressToast && typeof displayToast === 'function') {
             displayToast("自動導航模式已關閉");
         }
     }
@@ -2728,18 +2722,18 @@ async function handleAutoNavMapClick(e) {
     if (!window.isAutoNavMode) return;
     if (!e || !e.latlng) return;
 
+    const startCoords = getCoordinates();
+    if (!startCoords || typeof startCoords.lat !== 'number' || typeof startCoords.lng !== 'number' || isNaN(startCoords.lat) || isNaN(startCoords.lng)) {
+        if (typeof displayToast === 'function') {
+            displayToast("請先在地圖上設定當前位置或連線設備");
+        }
+        return;
+    }
+
+    const startLat = startCoords.lat;
+    const startLng = startCoords.lng;
     const destLat = e.latlng.lat;
     const destLng = e.latlng.lng;
-
-    const startCoords = getCoordinates();
-    let startLat, startLng;
-    if (startCoords && typeof startCoords.lat === 'number' && typeof startCoords.lng === 'number') {
-        startLat = startCoords.lat;
-        startLng = startCoords.lng;
-    } else {
-        startLat = destLat;
-        startLng = destLng;
-    }
 
     if (!marker && typeof createMarker === 'function') {
         marker = createMarker([startLat, startLng]);
@@ -2762,6 +2756,9 @@ async function handleAutoNavMapClick(e) {
             lineJoin: 'round'
         }).addTo(map);
     }
+
+    // Automatically exit targeting mode upon starting navigation
+    toggleAutoNavMode(false, true);
 
     const speed = getCurrentSpeed();
     return startNavigation(routeCoords, speed);

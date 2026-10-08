@@ -283,6 +283,26 @@ class TestCameraLockAndStateToggling(unittest.TestCase):
         self.assertTrue(data["explicitTrue"])
         self.assertFalse(data["explicitFalse"])
 
+    def test_toggle_auto_nav_mode_suppress_toast(self):
+        """toggleAutoNavMode with suppressToast=true does not trigger toast."""
+        js = """
+        let toasts = [];
+        global.displayToast = function(msg) { toasts.push(msg); };
+        toggleAutoNavMode(true, false);
+        const toastCountAfterOpen = toasts.length;
+        toggleAutoNavMode(false, true);
+        const toastCountAfterSilentClose = toasts.length;
+        console.log(JSON.stringify({
+            openToasts: toastCountAfterOpen,
+            closeToasts: toastCountAfterSilentClose,
+            isAutoNav: window.isAutoNavMode
+        }));
+        """
+        data = self._eval_state_js(js)
+        self.assertEqual(data["openToasts"], 1)
+        self.assertEqual(data["closeToasts"], 1)
+        self.assertFalse(data["isAutoNav"])
+
 
 class TestMapTemplateAutoNavVerification(unittest.TestCase):
     """Verify HTML template contains required Auto Nav controls, handlers, and elements."""
@@ -291,6 +311,19 @@ class TestMapTemplateAutoNavVerification(unittest.TestCase):
     def setUpClass(cls):
         template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
         cls.content = template_path.read_text(encoding="utf-8")
+
+    def test_no_duplicate_button_onclick_handlers(self):
+        """Ensure autoNavButton and cameraFollowButton do not bind redundant button.onclick."""
+        self.assertNotIn("autoNavButton.button.onclick", self.content)
+        self.assertNotIn("cameraFollowButton.button.onclick", self.content)
+
+    def test_start_coords_validation_toast_present(self):
+        """Ensure uninitialized coordinates trigger warning toast before routing."""
+        self.assertIn("請先在地圖上設定當前位置或連線設備", self.content)
+
+    def test_auto_nav_map_click_exits_mode_silently(self):
+        """Ensure handleAutoNavMapClick calls toggleAutoNavMode(false, true)."""
+        self.assertIn("toggleAutoNavMode(false, true)", self.content)
 
     def test_auto_nav_button_elements_present(self):
         """Template contains Auto Navigation EasyButton and icon."""

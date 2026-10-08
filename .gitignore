@@ -128,3 +128,5 @@ tests/__pycache__/test_navigation_engine.cpython-312.pyc
 tests/__pycache__/test_navigation_engine.cpython-313-pytest-9.0.2.pyc
 tests/__pycache__/test_speed_control.cpython-312.pyc
 tests/__pycache__/test_speed_control.cpython-313-pytest-9.0.2.pyc
+tests/__pycache__/test_modern_location_client.cpython-313-pytest-9.0.2.pyc
+src/__pycache__/modern_location_client.cpython-313.pyc
