@@ -4,10 +4,10 @@
 
 **Blocked by:** 01: Location Sink 適配器與基礎幾何步進核心
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Add global keydown and keyup event listeners for W, A, S, D, ArrowUp, ArrowLeft, ArrowDown, ArrowRight.
-- [ ] Implement a client-side movement ticker that sends `POST /move_step` every 1 second while any directional key is held down.
-- [ ] Immediately cease stepping and sending requests upon key release.
-- [ ] Smoothly update the Leaflet map marker position and coordinate input fields to mirror the stepped location.
-- [ ] Ignore keypress events when the user is focused on text inputs, textareas, or modal search fields.
+- [x] Add global keydown and keyup event listeners for W, A, S, D, ArrowUp, ArrowLeft, ArrowDown, ArrowRight.
+- [x] Implement a client-side movement ticker that sends `POST /move_step` every 1 second while any directional key is held down.
+- [x] Immediately cease stepping and sending requests upon key release.
+- [x] Smoothly update the Leaflet map marker position and coordinate input fields to mirror the stepped location.
+- [x] Ignore keypress events when the user is focused on text inputs, textareas, or modal search fields.
