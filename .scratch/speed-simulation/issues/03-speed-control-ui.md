@@ -4,10 +4,10 @@
 
 **Blocked by:** 02: 鍵盤 W/A/S/D 即時手動操控
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Add an intuitive speed toolbar widget containing buttons for 5 km/h (Walk), 20 km/h (Bike), and 60 km/h (Drive), plus a synchronized number input and slider control.
-- [ ] Provide a `POST /update_speed` API endpoint accepting `{ "speed_kmh": float }` that updates the backend navigation velocity state.
-- [ ] Changing the speed immediately adjusts the step distance for ongoing manual WASD stepping and any active route navigation without pausing or resetting.
-- [ ] Fix the legacy issue in `calculateTime` where custom numeric speeds defaulted back to 6 km/h.
-- [ ] Persist the user's chosen speed in localStorage so it is retained across page reloads.
+- [x] Add an intuitive speed toolbar widget containing buttons for 5 km/h (Walk), 20 km/h (Bike), and 60 km/h (Drive), plus a synchronized number input and slider control.
+- [x] Provide a `POST /update_speed` API endpoint accepting `{ "speed_kmh": float }` that updates the backend navigation velocity state.
+- [x] Changing the speed immediately adjusts the step distance for ongoing manual WASD stepping and any active route navigation without pausing or resetting.
+- [x] Fix the legacy issue in `calculateTime` where custom numeric speeds defaulted back to 6 km/h.
+- [x] Persist the user's chosen speed in localStorage so it is retained across page reloads.
