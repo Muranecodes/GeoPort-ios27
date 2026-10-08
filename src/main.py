@@ -52,6 +52,8 @@ from pymobiledevice3.lockdown import LockdownClient
 from pymobiledevice3.lockdown_service_provider import LockdownServiceProvider
 from pymobiledevice3.remote.common import TunnelProtocol
 from modern_location_client import ModernLocationController
+from geometry import calculate_step, get_bearing_for_direction
+from location_sink import LocationSink, DvtLocationSink, MockLocationSink
 
 #========= Arg Parser ========
 # Parse command-line arguments
@@ -60,7 +62,7 @@ parser.add_argument('--no-browser', action='store_true', help='Skip auto opening
 parser.add_argument('--port', type=int, help='Specify port number to listen on for web browser requests')
 parser.add_argument('--wifihost', type=str, help='Specify the wifi IP address to connect to')
 parser.add_argument('--udid', type=str, help='Specify the device udid to target')
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 #========= Arg Parser ========
 
 if sys.platform == 'win32':
@@ -1092,6 +1094,34 @@ def stop_set_location_thread():
         location_stop_event = None
 
 
+def dispatch_dvt_location(latitude: float, longitude: float):
+    global ios_version, udid, lockdown
+    if ios_version is not None and is_major_version_17_or_greater(ios_version):
+        if modern_location.enabled and ios_version.startswith('27.'):
+            modern_location.set(udid, latitude, longitude)
+            return
+        start_set_location_thread(latitude, longitude)
+    elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
+        mount_developer_image()
+        start_set_location_thread(latitude, longitude)
+    else:
+        raise RuntimeError("No iOS version present")
+
+
+current_location_sink: LocationSink = DvtLocationSink(
+    dispatch_fn=dispatch_dvt_location,
+    clear_fn=stop_set_location_thread,
+)
+
+
+def set_location_sink(sink: LocationSink) -> None:
+    global current_location_sink
+    current_location_sink = sink
+    app.config["LOCATION_SINK"] = sink
+
+
+def get_location_sink() -> LocationSink:
+    return app.config.get("LOCATION_SINK", current_location_sink)
 
 
 @app.route('/set_location', methods=['POST'])
@@ -1102,38 +1132,95 @@ def set_location():
         global udid, connection_type
         global ios_version
 
-        if ios_version is not None and is_major_version_17_or_greater(ios_version):
-            # Split the location string into latitude and longitude
-            latitude, longitude = map(float, location.split())
+        if location is None:
+            return jsonify({'error': 'Location is not set'}), 400
 
-            if modern_location.enabled and ios_version.startswith('27.'):
-                modern_location.set(udid, latitude, longitude)
-                return 'DVT set call completed; check the phone location'
-
-            #asyncio.run(set_location_thread(latitude, longitude))
-            start_set_location_thread(latitude, longitude)
-
-            return 'DVT set call completed; check the phone location'
-
-        elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
-            global lockdown
-            # Split the location string into latitude and longitude
-            latitude, longitude = map(float, location.split())
-
-            mount_developer_image()
-            #asyncio.run(set_location_thread(latitude, longitude))
-            start_set_location_thread(latitude, longitude)
-
-
-            return 'DVT set call completed; check the phone location'
-
-        else:
+        sink = get_location_sink()
+        if isinstance(sink, DvtLocationSink) and ios_version is None:
             # Invalid ios_version
             return jsonify({'error': 'No iOS version present'}), 400
+
+        # Split the location string into latitude and longitude
+        latitude, longitude = map(float, location.split())
+        sink.set_location(latitude, longitude)
+        return 'DVT set call completed; check the phone location'
 
     except Exception as e:
         error_message = str(e)
         return jsonify({'error': error_message}), 500
+
+
+@app.route('/move_step', methods=['POST'])
+def move_step():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({'error': 'Invalid or missing JSON body'}), 400
+
+        direction = data.get('direction')
+        if not direction:
+            return jsonify({'error': "Missing 'direction' parameter"}), 400
+
+        try:
+            get_bearing_for_direction(direction)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+
+        speed_kmh = data.get('speed_kmh')
+        if speed_kmh is None:
+            return jsonify({'error': "Missing 'speed_kmh' parameter"}), 400
+
+        try:
+            speed_kmh = float(speed_kmh)
+        except (ValueError, TypeError):
+            return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
+
+        if speed_kmh < 0:
+            return jsonify({'error': "'speed_kmh' cannot be negative"}), 400
+
+        global location
+        if 'lat' in data and 'lng' in data:
+            try:
+                cur_lat = float(data['lat'])
+                cur_lng = float(data['lng'])
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid lat/lng provided in request'}), 400
+        elif location is not None:
+            try:
+                cur_lat, cur_lng = map(float, location.split())
+            except Exception:
+                return jsonify({'error': 'Failed to parse current location'}), 400
+        else:
+            return jsonify({'error': 'Current location is not set'}), 400
+
+        # Stop active auto navigation if running
+        if hasattr(app, 'navigation_controller') and getattr(app, 'navigation_controller', None):
+            try:
+                app.navigation_controller.stop()
+            except Exception:
+                pass
+
+        # Calculate 1-second displacement
+        new_lat, new_lng, distance_meters = calculate_step(
+            cur_lat, cur_lng, direction, speed_kmh, duration_seconds=1.0
+        )
+
+        # Update active location
+        location = f"{new_lat} {new_lng}"
+
+        # Dispatch to location sink
+        sink = get_location_sink()
+        sink.set_location(new_lat, new_lng)
+
+        return jsonify({
+            'lat': new_lat,
+            'lng': new_lng,
+            'distance_m': distance_meters
+        }), 200
+
+    except Exception as e:
+        logger.exception("Error during /move_step")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/stop_location', methods=['POST'])
