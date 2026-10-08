@@ -1,4 +1,5 @@
 import locale
+import math
 import os
 import queue
 import re
@@ -1124,6 +1125,65 @@ def get_location_sink() -> LocationSink:
     return app.config.get("LOCATION_SINK", current_location_sink)
 
 
+current_speed_kmh: float = 5.0
+
+
+def set_current_speed(speed: float) -> None:
+    global current_speed_kmh
+    speed_float = float(speed)
+    current_speed_kmh = speed_float
+    app.config["CURRENT_SPEED_KMH"] = speed_float
+    if hasattr(app, "navigation_controller") and getattr(app, "navigation_controller", None):
+        controller = getattr(app, "navigation_controller")
+        if hasattr(controller, "speed_kmh"):
+            controller.speed_kmh = speed_float
+        if hasattr(controller, "update_speed"):
+            try:
+                controller.update_speed(speed_float)
+            except Exception:
+                pass
+
+
+def get_current_speed() -> float:
+    global current_speed_kmh
+    if hasattr(app, "navigation_controller") and getattr(app, "navigation_controller", None):
+        controller = getattr(app, "navigation_controller")
+        if hasattr(controller, "speed_kmh"):
+            return float(controller.speed_kmh)
+    return app.config.get("CURRENT_SPEED_KMH", current_speed_kmh)
+
+
+@app.route('/update_speed', methods=['POST'])
+def update_speed():
+    try:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({'error': 'Invalid or missing JSON body'}), 400
+
+        if 'speed_kmh' not in data:
+            return jsonify({'error': "Missing 'speed_kmh' parameter"}), 400
+
+        raw_speed = data.get('speed_kmh')
+        try:
+            speed_kmh = float(raw_speed)
+        except (ValueError, TypeError):
+            return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
+
+        if math.isnan(speed_kmh) or math.isinf(speed_kmh) or speed_kmh <= 0:
+            return jsonify({'error': "'speed_kmh' must be a positive number greater than 0"}), 400
+
+        set_current_speed(speed_kmh)
+
+        return jsonify({
+            'status': 'updated',
+            'speed_kmh': speed_kmh
+        }), 200
+
+    except Exception as e:
+        logger.exception("Error during /update_speed")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/set_location', methods=['POST'])
 def set_location():
     try:
@@ -1168,15 +1228,15 @@ def move_step():
 
         speed_kmh = data.get('speed_kmh')
         if speed_kmh is None:
-            return jsonify({'error': "Missing 'speed_kmh' parameter"}), 400
+            speed_kmh = get_current_speed()
+        else:
+            try:
+                speed_kmh = float(speed_kmh)
+            except (ValueError, TypeError):
+                return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
 
-        try:
-            speed_kmh = float(speed_kmh)
-        except (ValueError, TypeError):
-            return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
-
-        if speed_kmh < 0:
-            return jsonify({'error': "'speed_kmh' cannot be negative"}), 400
+            if speed_kmh < 0:
+                return jsonify({'error': "'speed_kmh' cannot be negative"}), 400
 
         global location
         if 'lat' in data and 'lng' in data:

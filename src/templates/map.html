@@ -233,6 +233,140 @@ body.dark-mode .modal-footer button {
     padding: 4px; /* Adjust padding as needed */
 }
 
+/* Speed Control Widget Styles */
+.speed-control-widget {
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    z-index: 1000;
+    user-select: none;
+    min-width: 250px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+body.dark-mode .speed-control-widget {
+    background: #2b2b2b;
+    color: #e0e0e0;
+    border-color: #555;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.speed-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #555;
+}
+
+body.dark-mode .speed-control-header {
+    color: #aaa;
+}
+
+.speed-presets-group {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.speed-preset-btn {
+    flex: 1;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #ced4da;
+    background: #f8f9fa;
+    color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease-in-out;
+}
+
+.speed-preset-btn:hover {
+    background: #e2e6ea;
+    border-color: #dae0e5;
+}
+
+.speed-preset-btn.active {
+    background: #007bff;
+    color: #ffffff;
+    border-color: #007bff;
+    box-shadow: 0 1px 3px rgba(0,123,255,0.4);
+}
+
+body.dark-mode .speed-preset-btn {
+    background: #3a3a3a;
+    color: #ddd;
+    border-color: #555;
+}
+
+body.dark-mode .speed-preset-btn:hover {
+    background: #4a4a4a;
+}
+
+body.dark-mode .speed-preset-btn.active {
+    background: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+}
+
+.speed-inputs-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.speed-slider-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+#speedRangeSlider {
+    width: 100%;
+    cursor: pointer;
+    height: 4px;
+}
+
+.speed-number-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#speedNumberInput {
+    width: 60px;
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    text-align: right;
+}
+
+body.dark-mode #speedNumberInput {
+    background: #3a3a3a;
+    color: #fff;
+    border-color: #555;
+}
+
+.speed-unit {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+body.dark-mode .speed-unit {
+    color: #aaa;
+}
+
     </style>
 </head>
 
@@ -374,6 +508,28 @@ body.dark-mode .modal-footer button {
 
 	<div id="dataList" class="mb-3"></div>
         </form>
+	<!-- Speed Control Toolbar Widget -->
+	<div id="speedControlWidget" class="speed-control-widget mb-2">
+		<div class="speed-control-header">
+			<span><i class="fa-solid fa-gauge-high mr-1"></i> Speed Control</span>
+			<span id="speedDisplayBadge" class="badge badge-primary">5 km/h</span>
+		</div>
+		<div class="speed-presets-group" role="group" aria-label="Speed Presets">
+			<button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">Walk (5 km/h)</button>
+			<button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="20" onclick="setSpeed(20.0)">Bike (20 km/h)</button>
+			<button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">Drive (60 km/h)</button>
+		</div>
+		<div class="speed-inputs-row">
+			<div class="speed-slider-wrap">
+				<input type="range" class="form-range" id="speedRangeSlider" min="1" max="100" step="1" value="5" title="Speed Range Slider">
+			</div>
+			<div class="speed-number-wrap">
+				<input type="number" class="form-control form-control-sm" id="speedNumberInput" min="0.1" max="200" step="0.5" value="5" title="Speed in km/h">
+				<span class="speed-unit">km/h</span>
+			</div>
+		</div>
+	</div>
+
 	<div id="map"></div>
 
 <script>
@@ -717,6 +873,21 @@ async function initializeMap(userLocale) {
 
     // Add layer control to map
     L.control.layers(baseLayers).addTo(map);
+
+    // Add Speed Control Widget to Leaflet map
+    var SpeedControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function(mapInstance) {
+            var widget = document.getElementById('speedControlWidget');
+            if (widget) {
+                L.DomEvent.disableClickPropagation(widget);
+                L.DomEvent.disableScrollPropagation(widget);
+                return widget;
+            }
+            return L.DomUtil.create('div');
+        }
+    });
+    new SpeedControl().addTo(map);
 
 
 
@@ -1666,17 +1837,37 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Function to calculate time required to travel between two points based on velocity
 function calculateTime(distance, velocity) {
-    const speed = {
+    const speedPresets = {
         "walk": 6,  // km/h
         "run": 12,  // km/h
         "ride": 20,  // km/h
+        "bike": 20,  // km/h
         "drive": 50  // km/h
     };
-    const speedKmh = speed[velocity] || speed["walk"]; // Default to walking speed if velocity is not found
+    let speedKmh = null;
+
+    if (typeof velocity === 'number' && !isNaN(velocity) && velocity > 0) {
+        speedKmh = velocity;
+    } else if (typeof velocity === 'string') {
+        const trimmed = velocity.trim().toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(speedPresets, trimmed)) {
+            speedKmh = speedPresets[trimmed];
+        } else {
+            const parsed = parseFloat(trimmed);
+            if (!isNaN(parsed) && parsed > 0) {
+                speedKmh = parsed;
+            }
+        }
+    }
+
+    if (!speedKmh || speedKmh <= 0) {
+        speedKmh = speedPresets["walk"]; // Default to walking speed if velocity is not found or invalid
+    }
 
     // Convert distance to kilometers and calculate time in seconds
     return (distance / speedKmh) * 3600;
 }
+window.calculateTime = calculateTime;
 
 
 function simulateGPXPlayback(lineLatLngs, velocity) {
@@ -1751,10 +1942,125 @@ const pressedKeyDirections = new Map(); // keyIdentifier -> direction ('w', 'a',
 let activeMovementInterval = null;
 let activeDirection = null;
 
+//============== Speed Control UI & State Management =============================
+window.currentSpeedKmh = 5.0;
+
+function syncSpeedControls(speed) {
+    const numInput = document.getElementById('speedNumberInput');
+    const slider = document.getElementById('speedRangeSlider');
+    const badge = document.getElementById('speedDisplayBadge');
+    const walkBtn = document.getElementById('speedPresetWalk');
+    const bikeBtn = document.getElementById('speedPresetBike');
+    const driveBtn = document.getElementById('speedPresetDrive');
+
+    if (numInput && parseFloat(numInput.value) !== speed) {
+        numInput.value = speed;
+    }
+    if (slider) {
+        const sliderVal = Math.min(Math.max(speed, parseFloat(slider.min) || 1), parseFloat(slider.max) || 100);
+        if (parseFloat(slider.value) !== sliderVal) {
+            slider.value = sliderVal;
+        }
+    }
+    if (badge) {
+        badge.innerText = speed + ' km/h';
+    }
+
+    if (walkBtn) walkBtn.classList.toggle('active', Math.abs(speed - 5.0) < 0.01);
+    if (bikeBtn) bikeBtn.classList.toggle('active', Math.abs(speed - 20.0) < 0.01);
+    if (driveBtn) driveBtn.classList.toggle('active', Math.abs(speed - 60.0) < 0.01);
+}
+
+function updateBackendSpeed(speed) {
+    fetch('/update_speed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speed_kmh: speed })
+    })
+    .then(res => {
+        if (!res.ok) {
+            console.warn('Failed to update speed on server, HTTP ' + res.status);
+        }
+        return res.json();
+    })
+    .catch(err => {
+        console.error('Error updating backend speed:', err);
+    });
+}
+
+function setSpeed(speed, syncServer = true) {
+    let parsed = parseFloat(speed);
+    if (isNaN(parsed) || parsed <= 0) {
+        parsed = 5.0;
+    }
+    parsed = Math.round(parsed * 10) / 10;
+
+    window.currentSpeedKmh = parsed;
+    syncSpeedControls(parsed);
+
+    try {
+        localStorage.setItem('geoport_speed_kmh', parsed.toString());
+    } catch (e) {
+        console.warn('Failed to save speed to localStorage:', e);
+    }
+
+    if (syncServer) {
+        updateBackendSpeed(parsed);
+    }
+}
+window.setSpeed = setSpeed;
+
+function initSpeedControl() {
+    let initialSpeed = 5.0;
+    try {
+        const stored = localStorage.getItem('geoport_speed_kmh');
+        if (stored !== null) {
+            const parsedStored = parseFloat(stored);
+            if (!isNaN(parsedStored) && parsedStored > 0) {
+                initialSpeed = parsedStored;
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to read speed from localStorage:', e);
+    }
+
+    const slider = document.getElementById('speedRangeSlider');
+    const numInput = document.getElementById('speedNumberInput');
+
+    if (slider) {
+        slider.addEventListener('input', function() {
+            setSpeed(this.value, true);
+        });
+    }
+
+    if (numInput) {
+        numInput.addEventListener('input', function() {
+            if (this.value && !isNaN(parseFloat(this.value)) && parseFloat(this.value) > 0) {
+                setSpeed(this.value, true);
+            }
+        });
+        numInput.addEventListener('change', function() {
+            setSpeed(this.value, true);
+        });
+    }
+
+    setSpeed(initialSpeed, true);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSpeedControl);
+} else {
+    initSpeedControl();
+}
+
 // Helper to determine the current speed in km/h (defaults to 5.0 km/h)
 function getCurrentSpeed() {
     if (typeof window.currentSpeedKmh === 'number' && !isNaN(window.currentSpeedKmh) && window.currentSpeedKmh > 0) {
         return window.currentSpeedKmh;
+    }
+    const speedNumInput = document.getElementById('speedNumberInput');
+    if (speedNumInput && speedNumInput.value && !isNaN(parseFloat(speedNumInput.value)) && parseFloat(speedNumInput.value) > 0) {
+        return parseFloat(speedNumInput.value);
     }
     const speedInput = document.getElementById('speedInput');
     if (speedInput && speedInput.value && !isNaN(parseFloat(speedInput.value)) && parseFloat(speedInput.value) > 0) {

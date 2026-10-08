@@ -197,11 +197,12 @@ class TestMoveStepEndpoint(unittest.TestCase):
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": -10.0})
         self.assertEqual(response.status_code, 400)
 
-        response = self.client.post("/move_step", json={"direction": "w"})
-        self.assertEqual(response.status_code, 400)
-
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": "not_a_number"})
         self.assertEqual(response.status_code, 400)
+
+        # In Ticket 03, omitting speed_kmh falls back to active speed state
+        response = self.client.post("/move_step", json={"direction": "w"})
+        self.assertEqual(response.status_code, 200)
 
     def test_move_step_north_dispatches_and_updates_location(self):
         start_lat = 25.0330
