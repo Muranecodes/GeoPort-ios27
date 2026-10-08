@@ -79,6 +79,17 @@
             max-height: 70vh;
         }
 
+        /* Smooth moving marker animation between 1-second ticks */
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow {
+            transition: transform 0.95s linear;
+        }
+        .leaflet-drag-target,
+        .leaflet-zoom-anim .leaflet-marker-icon,
+        .leaflet-zoom-anim .leaflet-marker-shadow {
+            transition: none !important;
+        }
+
         .coordinates-container {
             margin-top: 10px;
         }
@@ -2662,7 +2673,18 @@ function getFallbackRoute(startLat, startLng, destLat, destLng) {
 }
 window.getFallbackRoute = getFallbackRoute;
 
+const osrmRouteCache = new Map();
+window.osrmRouteCache = osrmRouteCache;
+
 async function fetchOsrmRoute(startLat, startLng, destLat, destLng, timeoutMs = 5000) {
+    const sLat = typeof startLat === 'number' ? startLat : parseFloat(startLat);
+    const sLng = typeof startLng === 'number' ? startLng : parseFloat(startLng);
+    const dLat = typeof destLat === 'number' ? destLat : parseFloat(destLat);
+    const dLng = typeof destLng === 'number' ? destLng : parseFloat(destLng);
+    const cacheKey = `${sLat.toFixed(5)},${sLng.toFixed(5)}-${dLat.toFixed(5)},${dLng.toFixed(5)}`;
+    if (window.osrmRouteCache && window.osrmRouteCache.has(cacheKey)) {
+        return window.osrmRouteCache.get(cacheKey);
+    }
     const url = buildOsrmFootRouteUrl(startLat, startLng, destLat, destLng);
     try {
         const controller = new AbortController();
@@ -2676,6 +2698,9 @@ async function fetchOsrmRoute(startLat, startLng, destLat, destLng, timeoutMs = 
         const data = await res.json();
         const coords = parseOsrmRouteGeometry(data);
         if (coords && coords.length >= 2) {
+            if (window.osrmRouteCache) {
+                window.osrmRouteCache.set(cacheKey, coords);
+            }
             return coords;
         }
         return getFallbackRoute(startLat, startLng, destLat, destLng);
@@ -2785,25 +2810,12 @@ function performMoveStep(dir) {
         speed_kmh: speed
     };
 
-    // If marker exists, provide lat/lng as fallback in case server location is unset
-    if (marker && typeof marker.getLatLng === 'function') {
-        const curLatLng = marker.getLatLng();
-        if (curLatLng && !isNaN(curLatLng.lat) && !isNaN(curLatLng.lng)) {
-            payload.lat = curLatLng.lat;
-            payload.lng = curLatLng.lng;
-        }
-    } else {
-        const coordInput = document.getElementById('coordinates');
-        if (coordInput && coordInput.value) {
-            const parts = coordInput.value.split(',');
-            if (parts.length === 2) {
-                const parsedLat = parseFloat(parts[0].trim());
-                const parsedLng = parseFloat(parts[1].trim());
-                if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-                    payload.lat = parsedLat;
-                    payload.lng = parsedLng;
-                }
-            }
+    // If coordinates are available, provide lat/lng as fallback in case server location is unset
+    if (typeof getCoordinates === 'function') {
+        const coords = getCoordinates();
+        if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
+            payload.lat = coords.lat;
+            payload.lng = coords.lng;
         }
     }
 
@@ -2888,9 +2900,12 @@ function handleKeyDown(event) {
         return;
     }
 
-    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, and UI displays a toast ("自動導航已中斷，切換為手動操作").
+    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, route line is cleared, and UI displays a toast ("自動導航已中斷，切換為手動操作").
     if (window.isNavigating || window.navPollInterval !== null) {
         stopNavigationStatusPolling();
+        if (typeof clearNavRoute === 'function') {
+            clearNavRoute();
+        }
         if (typeof displayToast === 'function') {
             displayToast("自動導航已中斷，切換為手動操作");
         }

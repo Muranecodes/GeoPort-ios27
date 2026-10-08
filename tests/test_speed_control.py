@@ -11,6 +11,7 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 import main
+from geometry import validate_speed
 from location_sink import MockLocationSink
 
 
@@ -54,6 +55,15 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         self.assertEqual(data.get("status"), "updated")
         self.assertEqual(data.get("speed_kmh"), 15.5)
         self.assertEqual(main.get_current_speed(), 15.5)
+
+    def test_update_speed_contract_when_navigation_inactive(self):
+        """POST /update_speed always returns updated_duration_s even when navigation is not active."""
+        response = self.client.post("/update_speed", json={"speed_kmh": 25.0})
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data.get("speed_kmh"), 25.0)
+        self.assertIn("updated_duration_s", data)
+        self.assertEqual(data.get("updated_duration_s"), 0.0)
 
     def test_update_speed_zero_returns_400(self):
         """Speed of 0 is invalid and returns 400 error."""
@@ -288,6 +298,27 @@ class TestCalculateTimeLogic(unittest.TestCase):
         self.assertAlmostEqual(data["fallbackZero"], 3600.0)
         self.assertAlmostEqual(data["fallbackNegative"], 3600.0)
         self.assertAlmostEqual(data["fallbackNull"], 3600.0)
+
+
+class TestSpeedValidation(unittest.TestCase):
+    def test_valid_speeds(self):
+        self.assertEqual(validate_speed(5), 5.0)
+        self.assertEqual(validate_speed(20.5), 20.5)
+        self.assertEqual(validate_speed("15.2"), 15.2)
+
+    def test_invalid_speeds_raise_value_error(self):
+        with self.assertRaises(ValueError):
+            validate_speed(0)
+        with self.assertRaises(ValueError):
+            validate_speed(-10)
+        with self.assertRaises(ValueError):
+            validate_speed("abc")
+        with self.assertRaises(ValueError):
+            validate_speed(float("nan"))
+        with self.assertRaises(ValueError):
+            validate_speed(float("inf"))
+        with self.assertRaises(ValueError):
+            validate_speed(None)
 
 
 if __name__ == "__main__":

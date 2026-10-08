@@ -3,7 +3,24 @@ Spherical geometry utilities for coordinate calculations and destination project
 """
 
 import math
-from typing import Tuple
+from typing import Any, Tuple
+
+
+def validate_speed(speed: Any) -> float:
+    """
+    Validates and converts a speed value in km/h.
+    Must be numeric, finite, and strictly greater than 0.
+    Raises ValueError if invalid, non-numeric, or <= 0.
+    """
+    try:
+        val = float(speed)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"Invalid speed value: {speed!r}; expected numeric.") from exc
+
+    if math.isnan(val) or math.isinf(val) or val <= 0:
+        raise ValueError("speed_kmh must be a positive number greater than 0.")
+
+    return val
 
 EARTH_RADIUS_METERS = 6371000.0
 

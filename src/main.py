@@ -59,6 +59,7 @@ from geometry import (
     calculate_bearing,
     calculate_polyline_distance,
     interpolate_polyline,
+    validate_speed,
 )
 from location_sink import LocationSink, DvtLocationSink, MockLocationSink
 from navigation_engine import NavigationController
@@ -1004,7 +1005,7 @@ def mount_developer_image():
         error_message = str(e)
         return jsonify({'error': error_message})
 
-async def set_location_thread(latitude, longitude, report_success, stop_event):
+async def set_location_thread(latitude, longitude, coord_queue, report_success, stop_event):
     try:
         global rsd_host, rsd_port, udid, ios_version, connection_type
 
@@ -1027,9 +1028,24 @@ async def set_location_thread(latitude, longitude, report_success, stop_event):
                             LocationSimulation(dvt).set(latitude, longitude)
                             report_success()
                             logger.warning("LocationSimulation accepted the set call")
-                            #OSUTILS.wait_return()
                             while not stop_event.is_set():
-                                await asyncio.sleep(0.5)
+                                try:
+                                    item = coord_queue.get_nowait()
+                                except queue.Empty:
+                                    item = None
+                                if item is not None:
+                                    coords, ack_queue = item
+                                    try:
+                                        LocationSimulation(dvt).set(coords[0], coords[1])
+                                        logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
+                                        if ack_queue is not None:
+                                            ack_queue.put_nowait(None)
+                                    except Exception as exc:
+                                        logger.exception("Error in persistent DVT stream update")
+                                        if ack_queue is not None:
+                                            ack_queue.put_nowait(exc)
+                                        raise
+                                await asyncio.sleep(0.05)
 
 
                 elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
@@ -1038,9 +1054,24 @@ async def set_location_thread(latitude, longitude, report_success, stop_event):
                         LocationSimulation(dvt).set(latitude, longitude)
                         report_success()
                         logger.warning("LocationSimulation accepted the set call")
-                        #await asyncio.wait_for(OSUTILS.wait_return(), timeout=1)  # Adjust timeout as needed
                         while not stop_event.is_set():
-                            await asyncio.sleep(0.5)
+                            try:
+                                item = coord_queue.get_nowait()
+                            except queue.Empty:
+                                item = None
+                            if item is not None:
+                                coords, ack_queue = item
+                                try:
+                                    LocationSimulation(dvt).set(coords[0], coords[1])
+                                    logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
+                                    if ack_queue is not None:
+                                        ack_queue.put_nowait(None)
+                                except Exception as exc:
+                                    logger.exception("Error in persistent DVT stream update")
+                                    if ack_queue is not None:
+                                        ack_queue.put_nowait(exc)
+                                    raise
+                            await asyncio.sleep(0.05)
                 else:
                     raise RuntimeError("Device iOS version is unavailable")
 
@@ -1061,18 +1092,47 @@ async def set_location_thread(latitude, longitude, report_success, stop_event):
         raise
 
 
-# Function to start the set_location_thread in a separate thread
+_dvt_thread = None
+_dvt_coord_queue = None
+
+
+# Function to start or stream to the set_location_thread
 def start_set_location_thread(latitude, longitude):
-    global location_stop_event
+    global location_stop_event, _dvt_thread, _dvt_coord_queue
+    # Reuse active persistent DVT session if healthy
+    if (
+        _dvt_thread is not None
+        and _dvt_thread.is_alive()
+        and location_stop_event is not None
+        and not location_stop_event.is_set()
+        and _dvt_coord_queue is not None
+    ):
+        ack = queue.Queue(maxsize=1)
+        _dvt_coord_queue.put(((latitude, longitude), ack))
+        try:
+            failure = ack.get(timeout=5.0)
+            if failure is None:
+                return
+            logger.warning("Active DVT session coordinate update failed: %s; restarting session", failure)
+        except queue.Empty:
+            logger.warning("Active DVT session update timed out; restarting session")
+
     # Stop existing threads
     stop_set_location_thread()
     stop_event = threading.Event()
     location_stop_event = stop_event
+    _dvt_coord_queue = queue.Queue()
     result = queue.Queue(maxsize=1)
 
     # The HTTP request waits until the actual DVT call completes or fails.
     async def run_async_function():
-        await set_location_thread(latitude, longitude, lambda: result.put_nowait(None), stop_event)
+        await set_location_thread(
+            latitude,
+            longitude,
+            _dvt_coord_queue,
+            lambda: result.put_nowait(None),
+            stop_event,
+        )
 
     # Create a new thread and start it
     def run_location_worker():
@@ -1081,8 +1141,12 @@ def start_set_location_thread(latitude, longitude):
         except Exception as exc:
             if result.empty():
                 result.put_nowait(exc)
+        finally:
+            global _dvt_coord_queue
+            _dvt_coord_queue = None
 
     location_thread = threading.Thread(target=run_location_worker, daemon=True)
+    _dvt_thread = location_thread
     location_thread.start()
 
     try:
@@ -1096,10 +1160,15 @@ def start_set_location_thread(latitude, longitude):
 
 # Function to stop the location thread
 def stop_set_location_thread():
-    global location_stop_event
+    global location_stop_event, _dvt_thread, _dvt_coord_queue
     if location_stop_event is not None:
         location_stop_event.set()
         location_stop_event = None
+    if _dvt_thread is not None and _dvt_thread.is_alive():
+        if threading.current_thread() != _dvt_thread:
+            _dvt_thread.join(timeout=1.0)
+        _dvt_thread = None
+    _dvt_coord_queue = None
 
 
 def dispatch_dvt_location(latitude: float, longitude: float):
@@ -1167,7 +1236,7 @@ current_speed_kmh: float = 5.0
 
 def set_current_speed(speed: float) -> None:
     global current_speed_kmh
-    speed_float = float(speed)
+    speed_float = validate_speed(speed)
     current_speed_kmh = speed_float
     app.config["CURRENT_SPEED_KMH"] = speed_float
     ctrl = getattr(app, "navigation_controller", None)
@@ -1202,24 +1271,23 @@ def update_speed():
         if 'speed_kmh' not in data:
             return jsonify({'error': "Missing 'speed_kmh' parameter"}), 400
 
-        raw_speed = data.get('speed_kmh')
         try:
-            speed_kmh = float(raw_speed)
-        except (ValueError, TypeError):
-            return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
-
-        if math.isnan(speed_kmh) or math.isinf(speed_kmh) or speed_kmh <= 0:
-            return jsonify({'error': "'speed_kmh' must be a positive number greater than 0"}), 400
+            speed_kmh = validate_speed(data.get('speed_kmh'))
+        except (ValueError, TypeError) as exc:
+            return jsonify({'error': str(exc)}), 400
 
         set_current_speed(speed_kmh)
 
+        ctrl = getattr(app, "navigation_controller", None)
+        updated_duration = 0.0
+        if ctrl is not None and getattr(ctrl, 'active', False):
+            updated_duration = getattr(ctrl, 'remaining_time_s', 0.0)
+
         resp = {
             'status': 'updated',
-            'speed_kmh': speed_kmh
+            'speed_kmh': speed_kmh,
+            'updated_duration_s': updated_duration,
         }
-        ctrl = getattr(app, "navigation_controller", None)
-        if ctrl is not None and getattr(ctrl, 'active', False):
-            resp['updated_duration_s'] = getattr(ctrl, 'remaining_time_s', 0.0)
 
         return jsonify(resp), 200
 
@@ -1247,12 +1315,9 @@ def start_navigation():
             speed_kmh = get_current_speed()
         else:
             try:
-                speed_kmh = float(speed_kmh)
-            except (ValueError, TypeError):
-                return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
-
-            if math.isnan(speed_kmh) or math.isinf(speed_kmh) or speed_kmh <= 0:
-                return jsonify({'error': "'speed_kmh' must be greater than 0"}), 400
+                speed_kmh = validate_speed(speed_kmh)
+            except (ValueError, TypeError) as exc:
+                return jsonify({'error': str(exc)}), 400
 
         ctrl = get_navigation_controller()
         result = ctrl.start(waypoints, speed_kmh)
@@ -1366,12 +1431,9 @@ def move_step():
             speed_kmh = get_current_speed()
         else:
             try:
-                speed_kmh = float(speed_kmh)
-            except (ValueError, TypeError):
-                return jsonify({'error': "Invalid 'speed_kmh' value; expected numeric"}), 400
-
-            if speed_kmh < 0:
-                return jsonify({'error': "'speed_kmh' cannot be negative"}), 400
+                speed_kmh = validate_speed(speed_kmh)
+            except (ValueError, TypeError) as exc:
+                return jsonify({'error': str(exc)}), 400
 
         global location
         if 'lat' in data and 'lng' in data:
@@ -1386,7 +1448,12 @@ def move_step():
             except Exception:
                 return jsonify({'error': 'Failed to parse current location'}), 400
         else:
-            return jsonify({'error': 'Current location is not set'}), 400
+            ctrl = get_navigation_controller()
+            if ctrl is not None and getattr(ctrl, 'active', False):
+                cur_lat = ctrl.current_lat
+                cur_lng = ctrl.current_lng
+            else:
+                return jsonify({'error': 'Current location is not set'}), 400
 
         # Stop active auto navigation if running
         ctrl = get_navigation_controller()

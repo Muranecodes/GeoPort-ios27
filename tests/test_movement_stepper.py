@@ -160,6 +160,19 @@ class TestLocationSink(unittest.TestCase):
         sink.clear_location()
         self.assertEqual(cleared, [True])
 
+    def test_dvt_location_sink_session_queue(self):
+        import queue
+        q = queue.Queue()
+        sink = DvtLocationSink(session_queue=q)
+        self.assertIs(sink.session_queue, q)
+
+        sink.set_location(35.6895, 139.6917)
+        self.assertEqual(q.get_nowait(), (35.6895, 139.6917))
+
+    def test_location_sink_has_no_circular_import_with_main(self):
+        import location_sink
+        self.assertNotIn("main", dir(location_sink))
+
 
 class TestMoveStepEndpoint(unittest.TestCase):
     def setUp(self):

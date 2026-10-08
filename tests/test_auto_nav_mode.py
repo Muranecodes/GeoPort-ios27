@@ -114,6 +114,75 @@ class TestOsrmRoutingMathAndParsing(unittest.TestCase):
         ]
         self.assertEqual(data["fallback"], expected_fallback)
 
+    def test_osrm_route_caching_in_memory(self):
+        """fetchOsrmRoute caches successful route geometry keyed by 5-decimal coordinates."""
+        runner_script = """
+        const fs = require('fs');
+        const content = fs.readFileSync(process.argv[1], 'utf-8');
+
+        global.window = global;
+        eval(content.match(/function buildOsrmFootRouteUrl[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/function parseOsrmRouteGeometry[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/function getFallbackRoute[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/const osrmRouteCache = new Map\\(\\);\\s*window\\.osrmRouteCache = osrmRouteCache;/)[0]);
+        eval(content.match(/async function fetchOsrmRoute[\\s\\S]*?\\n\\}/)[0]);
+
+        (async () => {
+            let fetchCount = 0;
+            global.fetch = async function() {
+                fetchCount++;
+                return {
+                    ok: true,
+                    json: async () => ({
+                        code: "Ok",
+                        routes: [{
+                            geometry: {
+                                coordinates: [
+                                    [121.5654, 25.0330],
+                                    [121.5750, 25.0400]
+                                ]
+                            }
+                        }]
+                    })
+                };
+            };
+
+            const r1 = await fetchOsrmRoute(25.033001, 121.565401, 25.040001, 121.575001);
+            const r2 = await fetchOsrmRoute(25.033002, 121.565402, 25.040002, 121.575002);
+
+            const cacheKey = "25.03300,121.56540-25.04000,121.57500";
+            const inCache = osrmRouteCache.has(cacheKey);
+
+            console.log(JSON.stringify({
+                fetchCount: fetchCount,
+                inCache: inCache,
+                r1Count: r1.length,
+                r2Count: r2.length
+            }));
+        })();
+        """
+        template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
+        result = subprocess.run(
+            ["node", "-e", runner_script, str(template_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["fetchCount"], 1)
+        self.assertTrue(data["inCache"])
+        self.assertEqual(data["r1Count"], 2)
+        self.assertEqual(data["r2Count"], 2)
+
+    def test_map_template_smooth_marker_animation_css(self):
+        """Map template contains CSS transition for smooth marker icon animation."""
+        self.assertIn(".leaflet-marker-icon", self.html_content)
+        self.assertIn("transition: transform", self.html_content)
+
+    def test_perform_move_step_uses_get_coordinates(self):
+        """performMoveStep reuses getCoordinates instead of duplicate parsing."""
+        self.assertIn("coords = getCoordinates()", self.html_content)
+
 
 class TestCameraLockAndStateToggling(unittest.TestCase):
     """Test camera lock state toggling and auto-nav toggle behavior via Node.js."""

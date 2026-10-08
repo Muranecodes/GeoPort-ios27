@@ -1,4 +1,6 @@
+import json
 import math
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -198,6 +200,61 @@ class TestKeyboardSteering(unittest.TestCase):
         # 5. Speed helper with default
         self.assertIn("getCurrentSpeed", content)
         self.assertIn("return 5.0", content)
+
+    def test_wasd_interruption_clears_nav_route(self):
+        """When keyboard WASD interrupts active navigation, clearNavRoute is invoked."""
+        js_code = """
+        const fs = require('fs');
+        const content = fs.readFileSync(process.argv[1], 'utf-8');
+
+        global.window = global;
+        global.document = {
+            activeElement: null,
+            getElementById: function() { return null; }
+        };
+        global.isNavigating = true;
+        global.navPollInterval = 123;
+        global.pressedKeyDirections = new Map();
+        global.activeMovementInterval = null;
+        global.activeDirection = null;
+        global.displayToast = function() {};
+
+        let cleared = false;
+        global.clearNavRoute = function() {
+            cleared = true;
+        };
+        global.stopNavigationStatusPolling = function() {
+            global.isNavigating = false;
+            global.navPollInterval = null;
+        };
+        global.performMoveStep = function() {};
+
+        eval(content.match(/function isInteractiveElement[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/function getDirectionFromEvent[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/function handleKeyDown[\\s\\S]*?\\n\\}/)[0]);
+
+        handleKeyDown({
+            code: 'KeyW',
+            key: 'w',
+            preventDefault: function() {}
+        });
+
+        if (global.activeMovementInterval) {
+            clearInterval(global.activeMovementInterval);
+        }
+
+        console.log(JSON.stringify({ cleared: cleared, isNavigating: global.isNavigating }));
+        """
+        template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
+        result = subprocess.run(
+            ["node", "-e", js_code, str(template_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        data = json.loads(result.stdout)
+        self.assertTrue(data["cleared"])
+        self.assertFalse(data["isNavigating"])
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Isolates device communication (DVT / pymobiledevice3) from movement calculation 
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 import logging
 
 logger = logging.getLogger("GeoPort")
@@ -60,48 +60,46 @@ class MockLocationSink(LocationSink):
 class DvtLocationSink(LocationSink):
     """
     Production location sink connecting to Apple DVT LocationSimulation or delegating handler.
+    Supports clean callback injection and optional persistent streaming queue.
     """
 
     def __init__(
         self,
         dispatch_fn: Optional[Callable[[float, float], None]] = None,
         clear_fn: Optional[Callable[[], None]] = None,
+        session_queue: Optional[Any] = None,
     ) -> None:
         self._dispatch_fn = dispatch_fn
         self._clear_fn = clear_fn
+        self._session_queue = session_queue
+
+    @property
+    def session_queue(self) -> Optional[Any]:
+        return self._session_queue
+
+    @session_queue.setter
+    def session_queue(self, queue_obj: Optional[Any]) -> None:
+        self._session_queue = queue_obj
 
     def set_location(self, latitude: float, longitude: float) -> None:
+        if self._session_queue is not None:
+            self._session_queue.put((latitude, longitude))
+            return
+
         if self._dispatch_fn is not None:
             self._dispatch_fn(latitude, longitude)
             return
 
-        try:
-            import main
-
-            if hasattr(main, "dispatch_dvt_location"):
-                main.dispatch_dvt_location(latitude, longitude)
-            elif hasattr(main, "start_set_location_thread"):
-                main.start_set_location_thread(latitude, longitude)
-            else:
-                logger.warning(
-                    "No DVT dispatch implementation found when setting (%s, %s)",
-                    latitude,
-                    longitude,
-                )
-        except Exception as e:
-            logger.exception("DvtLocationSink failed to dispatch location")
-            raise
+        logger.warning(
+            "No DVT dispatch implementation found when setting (%s, %s)",
+            latitude,
+            longitude,
+        )
 
     def clear_location(self) -> None:
         if self._clear_fn is not None:
             self._clear_fn()
             return
 
-        try:
-            import main
+        logger.warning("No DVT clear handler configured")
 
-            if hasattr(main, "stop_set_location_thread"):
-                main.stop_set_location_thread()
-        except Exception as e:
-            logger.exception("DvtLocationSink failed to clear location")
-            raise

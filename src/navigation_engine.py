@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from geometry import (
     calculate_polyline_distance,
     interpolate_polyline,
+    validate_speed,
 )
 from location_sink import LocationSink
 
@@ -91,9 +92,7 @@ class NavigationController:
         if len(clean_pts) < 2:
             raise ValueError("Waypoints must contain at least 2 coordinate pairs.")
 
-        speed = float(speed_kmh)
-        if speed <= 0 or math.isnan(speed) or math.isinf(speed):
-            raise ValueError("speed_kmh must be a positive number greater than 0.")
+        speed = validate_speed(speed_kmh)
 
         total_dist = calculate_polyline_distance(clean_pts)
         speed_mps = speed / 3.6
@@ -135,6 +134,18 @@ class NavigationController:
                 "total_distance_m": 0.0,
                 "estimated_duration_s": 0.0,
             }
+
+        target_sink = self.sink
+        if target_sink is not None:
+            try:
+                target_sink.set_location(self.current_lat, self.current_lng)
+            except Exception as e:
+                logger.exception("Error setting initial sink location: %s", e)
+        if self.on_location_update is not None:
+            try:
+                self.on_location_update(self.current_lat, self.current_lng)
+            except Exception as e:
+                logger.exception("Error calling on_location_update: %s", e)
 
         self._thread = threading.Thread(
             target=self._worker_loop,
@@ -258,9 +269,7 @@ class NavigationController:
         """
         Dynamically updates current movement speed and recalculates remaining ETA.
         """
-        speed = float(speed_kmh)
-        if speed <= 0 or math.isnan(speed) or math.isinf(speed):
-            raise ValueError("speed_kmh must be a positive number greater than 0.")
+        speed = validate_speed(speed_kmh)
 
         with self._lock:
             self.speed_kmh = speed
