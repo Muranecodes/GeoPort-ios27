@@ -1025,7 +1025,8 @@ async def set_location_thread(latitude, longitude, coord_queue, report_success, 
                         raise RuntimeError("RSD tunnel is not ready")
                     async with RemoteServiceDiscoveryService((rsd_host, rsd_port)) as sp_rsd:
                         with DvtSecureSocketProxyService(sp_rsd) as dvt:
-                            LocationSimulation(dvt).set(latitude, longitude)
+                            sim = LocationSimulation(dvt)
+                            sim.set(latitude, longitude)
                             report_success()
                             logger.warning("LocationSimulation accepted the set call")
                             while not stop_event.is_set():
@@ -1036,7 +1037,7 @@ async def set_location_thread(latitude, longitude, coord_queue, report_success, 
                                 if item is not None:
                                     coords, ack_queue = item
                                     try:
-                                        LocationSimulation(dvt).set(coords[0], coords[1])
+                                        sim.set(coords[0], coords[1])
                                         logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
                                         if ack_queue is not None:
                                             ack_queue.put_nowait(None)
@@ -1050,8 +1051,9 @@ async def set_location_thread(latitude, longitude, coord_queue, report_success, 
 
                 elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
                     with DvtSecureSocketProxyService(lockdown=lockdown) as dvt:
-                        LocationSimulation(dvt).clear()
-                        LocationSimulation(dvt).set(latitude, longitude)
+                        sim = LocationSimulation(dvt)
+                        sim.clear()
+                        sim.set(latitude, longitude)
                         report_success()
                         logger.warning("LocationSimulation accepted the set call")
                         while not stop_event.is_set():
@@ -1062,7 +1064,7 @@ async def set_location_thread(latitude, longitude, coord_queue, report_success, 
                             if item is not None:
                                 coords, ack_queue = item
                                 try:
-                                    LocationSimulation(dvt).set(coords[0], coords[1])
+                                    sim.set(coords[0], coords[1])
                                     logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
                                     if ack_queue is not None:
                                         ack_queue.put_nowait(None)

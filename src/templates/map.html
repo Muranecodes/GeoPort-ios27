@@ -1774,6 +1774,9 @@ let currentLayer = null;
 
 // Function to set coordinates
 function setCoordinates(lat, lng) {
+    if (typeof window !== 'undefined') {
+        window.lastDispatchedMoveCoords = { lat: Number(lat), lng: Number(lng) };
+    }
     document.getElementById('coordinates').value = lat + ', ' + lng;
     updateSetLocationButtonStatus();
     updateStopLocationButtonStatus(); // Add this line to update the Stop Location button status
@@ -2801,9 +2804,19 @@ function getActiveDirection() {
     return dirs[dirs.length - 1];
 }
 
+var isMoveStepInFlight = false;
+var pendingMoveStepDir = null;
+var lastDispatchedMoveCoords = null;
+window.lastDispatchedMoveCoords = lastDispatchedMoveCoords;
+
 // Function to perform a single move step via POST /move_step
 function performMoveStep(dir) {
     if (!dir) return;
+    if (isMoveStepInFlight) {
+        pendingMoveStepDir = dir;
+        return;
+    }
+
     const speed = getCurrentSpeed();
     const payload = {
         direction: dir,
@@ -2811,14 +2824,16 @@ function performMoveStep(dir) {
     };
 
     // If coordinates are available, provide lat/lng as fallback in case server location is unset
-    if (typeof getCoordinates === 'function') {
-        const coords = getCoordinates();
-        if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
-            payload.lat = coords.lat;
-            payload.lng = coords.lng;
-        }
+    let baseCoords = window.lastDispatchedMoveCoords;
+    if (!baseCoords && typeof getCoordinates === 'function') {
+        baseCoords = getCoordinates();
+    }
+    if (baseCoords && typeof baseCoords.lat === 'number' && typeof baseCoords.lng === 'number' && !isNaN(baseCoords.lat) && !isNaN(baseCoords.lng)) {
+        payload.lat = baseCoords.lat;
+        payload.lng = baseCoords.lng;
     }
 
+    isMoveStepInFlight = true;
     fetch('/move_step', {
         method: 'POST',
         headers: {
@@ -2834,16 +2849,29 @@ function performMoveStep(dir) {
     })
     .then(data => {
         if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
+            window.lastDispatchedMoveCoords = { lat: data.lat, lng: data.lng };
             updatePositionOnStep(data.lat, data.lng);
         }
     })
     .catch(error => {
         console.error('Error during move_step:', error);
+    })
+    .finally(() => {
+        isMoveStepInFlight = false;
+        if (pendingMoveStepDir && activeDirection) {
+            const nextDir = pendingMoveStepDir;
+            pendingMoveStepDir = null;
+            performMoveStep(nextDir);
+        } else {
+            pendingMoveStepDir = null;
+        }
     });
 }
 
 // Update the marker, input fields, and state when step coordinates are received
 function updatePositionOnStep(lat, lng) {
+    window.lastDispatchedMoveCoords = { lat: lat, lng: lng };
+
     // 1. Update marker on Leaflet map smoothly or create marker if none exists
     if (!marker || (typeof map !== 'undefined' && map && !map.hasLayer(marker))) {
         if (typeof createMarker === 'function') {
@@ -2973,6 +3001,7 @@ function stopKeyboardSteering() {
         activeMovementInterval = null;
     }
     activeDirection = null;
+    pendingMoveStepDir = null;
     pressedKeyDirections.clear();
 }
 window.stopKeyboardSteering = stopKeyboardSteering;
