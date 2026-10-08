@@ -1,6 +1,6 @@
 # Spec: Speed Simulation Movement (特定時速移動模擬)
 
-Status: ready-for-agent
+Status: completed
 
 ## Problem Statement
 
