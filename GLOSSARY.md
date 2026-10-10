@@ -24,6 +24,10 @@ _Avoid_: Playback, teleport, route replay
 Real-time user-controlled directional movement using keyboard inputs (WASD / arrow keys) advancing coordinates at the currently selected speed.
 _Avoid_: Joystick mode, key walking
 
+**Planting Speed**:
+A specialized movement preset capped at 19.1 km/h tailored for location-based games to maximize active flower planting while staying under speed lock thresholds.
+_Avoid_: Bike preset, cycling speed, 20kmh
+
 **Fuel Mode**:
 A deprecated legacy subsystem that scraped Australian fuel prices and positioned simulated GPS coordinates at gas stations. Slated for complete removal.
 _Avoid_: Fuel prices, fuel data

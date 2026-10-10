@@ -256,6 +256,16 @@ class TestKeyboardSteering(unittest.TestCase):
         self.assertTrue(data["cleared"])
         self.assertFalse(data["isNavigating"])
 
+    def test_keyboard_anti_burst_timeout_and_pacing(self):
+        """Verify map.html implements anti-burst timing with activeMovementTimeout and lastMoveStepTime."""
+        template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
+        content = template_path.read_text(encoding="utf-8")
+        self.assertIn("activeMovementTimeout", content)
+        self.assertIn("lastMoveStepTime", content)
+        self.assertIn("elapsed >= 950", content)
+        self.assertIn("Math.max(50, 1000 - elapsed)", content)
+        self.assertIn("stopKeyboardSteering", content)
+
 
 if __name__ == "__main__":
     unittest.main()

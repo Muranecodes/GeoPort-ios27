@@ -260,6 +260,34 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         finally:
             fast_controller.stop()
 
+    def test_worker_monotonic_clock_pacing_and_burst_prevention(self):
+        """Worker thread maintains minimum tick_interval between dispatches and prevents bursts."""
+        tick_times = []
+        def on_update(lat, lng):
+            tick_times.append(time.monotonic())
+
+        pacing_controller = NavigationController(
+            sink=self.mock_sink,
+            on_location_update=on_update,
+            tick_interval=0.08  # 80ms ticks for Windows timer granularity
+        )
+        p1 = (25.0330, 121.5654)
+        p2 = (25.0400, 121.5654)  # ~778 meters away
+        try:
+            pacing_controller.start([p1, p2], speed_kmh=5.0)
+            # Wait for at least 3 ticks
+            time.sleep(0.30)
+            self.assertGreaterEqual(len(tick_times), 3)
+
+            # Check interval between consecutive ticks: every interval should be >= tick_interval - epsilon
+            # Note: tick_times[0] is the initial start() dispatch. Subsequent are worker ticks.
+            intervals = [tick_times[i] - tick_times[i - 1] for i in range(1, len(tick_times))]
+            for interval in intervals:
+                self.assertGreaterEqual(interval, 0.05)  # within tolerance
+        finally:
+            pacing_controller.stop()
+
+
 
 class TestNavigationFlaskEndpoints(unittest.TestCase):
     def setUp(self):

@@ -218,9 +218,9 @@ class TestMapTemplateSpeedControl(unittest.TestCase):
         self.assertIn("speedPresetBike", self.content)
         self.assertIn("speedPresetDrive", self.content)
 
-        # Verify preset texts Walk (5 km/h), Bike (20 km/h), Drive (60 km/h)
+        # Verify preset texts Walk (5 km/h), Flower planting (19.1 km/h), Drive (60 km/h)
         self.assertIn("Walk (5 km/h)", self.content)
-        self.assertIn("Bike (20 km/h)", self.content)
+        self.assertIn("19.1 km/h", self.content)
         self.assertIn("Drive (60 km/h)", self.content)
 
     def test_speed_persistence_and_backend_sync_present(self):
