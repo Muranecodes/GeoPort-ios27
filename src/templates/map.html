@@ -481,12 +481,6 @@ body.dark-mode .hud-stat-value {
 </head>
 
 <body>
-  {% if version_message %}
-        <div class="alert alert-warning" role="alert">
-            {{ version_message }}
-        </div>
-    {% endif %}
-
 {% if timeout_message %}
         <div class="alert alert-warning" role="alert">
             {{ timeout_message }}
@@ -501,7 +495,6 @@ body.dark-mode .hud-stat-value {
 
 <div class="d-flex flex-column align-items-center flex-md-row container">
     <h4 class="my-0 mx-auto font-weight-normal">GeoPort - Your location, Anywhere!</h4>
-    <a id="about-btn" class="btn btn-outline-primary pl-4 pr-4" href="#" title="GeoPort" style="display: none;">About</a>
     <a id="exit-btn" class="btn btn-outline-primary pl-4 pr-4 ml-4" href="#" title="GeoPort" onclick="exitApp()">Exit</a>
 </div>
 
@@ -512,13 +505,6 @@ body.dark-mode .hud-stat-value {
     <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
         <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
-
-    </div>
-</div>
-<div class="d-flex justify-content-md-end mt-3 container">
-    <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" id="enableFuelPrices" onchange="toggleFuelTypeVisibility()">
-            <label for="enableFuelPrices"> Fuel Mode</label>
     </div>
 </div>
 
@@ -555,17 +541,6 @@ body.dark-mode .hud-stat-value {
 
 
 
-    <!-- Keeping this code for the connection details drop down list, but hiding it. Not really required, but handy for debugging -->
-<div class="mb-3" style="display: none;">
-    <label for="connection">Connection:</label><br>
-    <div class="row">
-        <div class="col">
-            <select class="custom-select d-block w-100" id="connection" required>
-            </select>
-        </div>
-    </div>
-</div>
-
 <button type="button" class="btn btn-primary pl-4 pr-4" id="connect" onclick="connectDevice()">
     <span id="connectText">Connect Device</span>
     <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
@@ -580,44 +555,6 @@ body.dark-mode .hud-stat-value {
 <input class="form-control" type="text" id="rsdData" placeholder="RSD Data…" readonly style="display: none;">  <!-- Initially hidden -->
 
 {% endif %}
-
-<p></p>
-    <form>
-<!-- Not implemented in standard version -->
-<!--<div class="mb-3">-->
-<!--        <input type="checkbox" role="switch" id="enableFuelPrices" onchange="toggleFuelTypeVisibility()" checked>-->
-<!--        <label for="enableFuelPrices"> Enable best fuel prices (Australia only)</label>-->
-<!--    </div>-->
-
-<!--     Fuel Region Dropdown -->
-    <div class="mb-3" id="fuelRegionSection" style="display: none;">
-    <label for="fuelRegion">Select Region:</label>
-    <select class="custom-select" id="fuelRegion" onchange="handleFuelTypeChange()">
-        <option value="All">All</option>
-        <option value="ACT">ACT</option>
-        <option value="NSW">NSW</option>
-        <option value="QLD">QLD</option>
-        <option value="VIC">VIC</option>
-        <option value="WA">WA</option>
-    </select>
-</div>
-        <!--     Fuel Type Dropdown -->
-    <div class="mb-3" id="fuelTypeSection" style="display: none;">
-        <label for="fuelType">Select fuel type:</label>
-        <select class="custom-select" id="fuelType" onchange="handleFuelTypeChange()">
-            <!-- Options will be populated dynamically -->
-        </select>
-        <p></p>
-        <div class="form-group">
-            <div class="collapse" id="fuelDataCollapse">
-                <label for="fuelText">Fuel Data</label>
-                <textarea class="form-control" id="fuelText" rows="8" readonly disabled></textarea>
-            </div>
-        </div>
-    </div>
-
-	<div id="dataList" class="mb-3"></div>
-        </form>
 	<!-- Speed Control Toolbar Widget -->
 	<div id="speedControlWidget" class="speed-control-widget mb-2">
 		<div class="speed-control-header">
@@ -626,7 +563,7 @@ body.dark-mode .hud-stat-value {
 		</div>
 		<div class="speed-presets-group" role="group" aria-label="Speed Presets">
 			<button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">Walk (5 km/h)</button>
-			<button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="20" onclick="setSpeed(20.0)">Bike (20 km/h)</button>
+			<button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)">🌸 種花 (19.1 km/h)</button>
 			<button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">Drive (60 km/h)</button>
 		</div>
 		<div class="speed-inputs-row">
@@ -805,11 +742,7 @@ L.leafletMenu = function(a, b) {
 
     var connectTextElement = document.getElementById('connectText');
     var rsdDataElement = document.getElementById('rsdData');
-    var appVersionNum = "{{ app_version_num }}";
-    var appVersionType = "{{ app_version_type }}";
     var selectedDevicePlatform = "{{ current_platform }}";
-    console.log("App Version: ", appVersionNum);
-    console.log("App Type: ", appVersionType);
     console.log("Platform: ", selectedDevicePlatform);
 
     // Function to toggle Dark Mode
@@ -826,24 +759,6 @@ L.leafletMenu = function(a, b) {
         document.body.classList.remove("dark-mode");
       }
     }
-
-
-if (appVersionType === "standard") {
-    var fuelTypeSection = document.getElementById('fuelTypeSection');
-    var fuelRegionSection = document.getElementById('fuelRegionSection');
-    var enableFuelPricesCheckbox = document.getElementById('enableFuelPrices');
-    var enableFuelPricesLabel = document.querySelector('label[for="enableFuelPrices"]');
-
-    // Hide the label for the checkbox
-    enableFuelPricesLabel.style.display = 'none';
-
-    // Hide the Fuel Type and Fuel Region sections
-    fuelTypeSection.style.display = 'none';
-    fuelRegionSection.style.display = 'none';
-
-    // Hide the "Enable best fuel prices" checkbox
-    enableFuelPricesCheckbox.style.display = 'none';
-}
 
 
 
@@ -882,10 +797,7 @@ let isDrawingMode = false; // Flag to track drawing mode
 
 
 // Initialize the map
-async function initializeMap(userLocale) {
-    var userLocale = "{{ user_locale }}";
-    console.log('User locale:', userLocale);
-
+async function initializeMap() {
     // Create the map instance after obtaining coordinates
     map = L.map('map', {
         keyboard: false // Disable keyboard navigation
@@ -969,8 +881,7 @@ async function initializeMap(userLocale) {
         maxZoom: 20
     });
 
-    // Use searchLocation to get coordinates based on userLocale
-    await searchLocation(userLocale);
+    map.setView([25.0330, 121.5654], 4);
 
     map.on('dblclick', handleMapDoubleClick);
     map.on('click', function(e) {
@@ -1794,6 +1705,7 @@ function handleSearch() {
 
 // Function to search location
 async function searchLocation(input, userLocale) {
+    if (!input || !input.trim()) return;
     // Initialize the OSM provider for searching
     var provider = new GeoSearch.OpenStreetMapProvider();
     try {
@@ -2155,7 +2067,9 @@ function resetPlaybackFlag() {
 // Active key state tracking
 const pressedKeyDirections = new Map(); // keyIdentifier -> direction ('w', 'a', 's', 'd')
 let activeMovementInterval = null;
+let activeMovementTimeout = null;
 let activeDirection = null;
+window.lastMoveStepTime = 0;
 
 //============== Speed Control UI & State Management =============================
 window.currentSpeedKmh = 5.0;
@@ -2182,7 +2096,7 @@ function syncSpeedControls(speed) {
     }
 
     if (walkBtn) walkBtn.classList.toggle('active', Math.abs(speed - 5.0) < 0.01);
-    if (bikeBtn) bikeBtn.classList.toggle('active', Math.abs(speed - 20.0) < 0.01);
+    if (bikeBtn) bikeBtn.classList.toggle('active', Math.abs(speed - 19.1) < 0.01);
     if (driveBtn) driveBtn.classList.toggle('active', Math.abs(speed - 60.0) < 0.01);
 }
 
@@ -2745,7 +2659,24 @@ async function handleAutoNavMapClick(e) {
         return;
     }
 
-    const routeCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
+    const rawRouteCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
+    const routeCoords = (rawRouteCoords && Array.isArray(rawRouteCoords)) ? rawRouteCoords.slice() : [];
+
+    // Ensure smooth initial start transition:
+    // If OSRM snapped the first waypoint away from user's current exact location,
+    // prepend [startLat, startLng] so there is zero initial teleport jump.
+    if (routeCoords.length >= 2) {
+        const first = routeCoords[0];
+        if (Math.abs(startLat - first[0]) > 0.00002 || Math.abs(startLng - first[1]) > 0.00002) {
+            routeCoords.unshift([startLat, startLng]);
+        } else {
+            routeCoords[0] = [startLat, startLng];
+        }
+        const last = routeCoords[routeCoords.length - 1];
+        if (Math.abs(destLat - last[0]) > 0.00002 || Math.abs(destLng - last[1]) > 0.00002) {
+            routeCoords.push([destLat, destLng]);
+        }
+    }
 
     clearNavRoute();
     if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
@@ -2831,6 +2762,7 @@ function performMoveStep(dir) {
     }
 
     isMoveStepInFlight = true;
+    window.lastMoveStepTime = Date.now();
     fetch('/move_step', {
         method: 'POST',
         headers: {
@@ -2927,9 +2859,13 @@ function handleKeyDown(event) {
 
     // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, route line is cleared, and UI displays a toast ("自動導航已中斷，切換為手動操作").
     if (window.isNavigating || window.navPollInterval !== null) {
-        stopNavigationStatusPolling();
-        if (typeof clearNavRoute === 'function') {
-            clearNavRoute();
+        if (typeof stopNavigation === 'function') {
+            stopNavigation();
+        } else {
+            stopNavigationStatusPolling();
+            if (typeof clearNavRoute === 'function') {
+                clearNavRoute();
+            }
         }
         if (typeof displayToast === 'function') {
             displayToast("自動導航已中斷，切換為手動操作");
@@ -2939,21 +2875,46 @@ function handleKeyDown(event) {
     pressedKeyDirections.set(keyId, dir);
     activeDirection = dir;
 
-    // Reset any existing ticker interval
+    // Reset any existing ticker interval / timeout
+    if (typeof window !== 'undefined' && window.activeMovementTimeout) {
+        clearTimeout(window.activeMovementTimeout);
+        window.activeMovementTimeout = null;
+    }
     if (activeMovementInterval) {
         clearInterval(activeMovementInterval);
         activeMovementInterval = null;
     }
 
-    // Immediately trigger a step
-    performMoveStep(dir);
+    const now = Date.now();
+    const elapsed = now - (window.lastMoveStepTime || 0);
 
-    // Continuous 1.0 second (1000ms) interval while held
-    activeMovementInterval = setInterval(function() {
-        if (activeDirection) {
-            performMoveStep(activeDirection);
-        }
-    }, 1000);
+    // If >= 950ms have elapsed since the last step, step immediately and cadence at 1000ms.
+    // Otherwise, delay the first step by the remainder to guarantee minimum 1.0s between steps.
+    if (elapsed >= 950) {
+        window.lastMoveStepTime = now;
+        performMoveStep(dir);
+        activeMovementInterval = setInterval(function() {
+            if (activeDirection) {
+                window.lastMoveStepTime = Date.now();
+                performMoveStep(activeDirection);
+            }
+        }, 1000);
+    } else {
+        const remainingDelay = Math.max(50, 1000 - elapsed);
+        window.activeMovementTimeout = setTimeout(function() {
+            window.activeMovementTimeout = null;
+            if (activeDirection) {
+                window.lastMoveStepTime = Date.now();
+                performMoveStep(activeDirection);
+                activeMovementInterval = setInterval(function() {
+                    if (activeDirection) {
+                        window.lastMoveStepTime = Date.now();
+                        performMoveStep(activeDirection);
+                    }
+                }, 1000);
+            }
+        }, remainingDelay);
+    }
 }
 
 // Keyup handler
@@ -2970,7 +2931,11 @@ function handleKeyUp(event) {
     const keyId = event.code || event.key;
     pressedKeyDirections.delete(keyId);
 
-    // Clear active interval immediately upon release
+    // Clear active interval and timeout immediately upon release
+    if (typeof window !== 'undefined' && window.activeMovementTimeout) {
+        clearTimeout(window.activeMovementTimeout);
+        window.activeMovementTimeout = null;
+    }
     if (activeMovementInterval) {
         clearInterval(activeMovementInterval);
         activeMovementInterval = null;
@@ -2979,13 +2944,33 @@ function handleKeyUp(event) {
     const nextDir = getActiveDirection();
     if (nextDir) {
         activeDirection = nextDir;
-        // Continue in that key's direction
-        performMoveStep(nextDir);
-        activeMovementInterval = setInterval(function() {
-            if (activeDirection) {
-                performMoveStep(activeDirection);
-            }
-        }, 1000);
+        const now = Date.now();
+        const elapsed = now - (window.lastMoveStepTime || 0);
+        if (elapsed >= 950) {
+            window.lastMoveStepTime = now;
+            performMoveStep(nextDir);
+            activeMovementInterval = setInterval(function() {
+                if (activeDirection) {
+                    window.lastMoveStepTime = Date.now();
+                    performMoveStep(activeDirection);
+                }
+            }, 1000);
+        } else {
+            const remainingDelay = Math.max(50, 1000 - elapsed);
+            window.activeMovementTimeout = setTimeout(function() {
+                window.activeMovementTimeout = null;
+                if (activeDirection) {
+                    window.lastMoveStepTime = Date.now();
+                    performMoveStep(activeDirection);
+                    activeMovementInterval = setInterval(function() {
+                        if (activeDirection) {
+                            window.lastMoveStepTime = Date.now();
+                            performMoveStep(activeDirection);
+                        }
+                    }, 1000);
+                }
+            }, remainingDelay);
+        }
     } else {
         activeDirection = null;
     }
@@ -2993,6 +2978,10 @@ function handleKeyUp(event) {
 
 // Function to immediately stop stepping on blur or navigation cancel
 function stopKeyboardSteering() {
+    if (typeof window !== 'undefined' && window.activeMovementTimeout) {
+        clearTimeout(window.activeMovementTimeout);
+        window.activeMovementTimeout = null;
+    }
     if (activeMovementInterval) {
         clearInterval(activeMovementInterval);
         activeMovementInterval = null;
@@ -3012,7 +3001,6 @@ window.performMoveStep = performMoveStep;
 
 function populateDeviceList() {
     var deviceDropdown = document.getElementById('device');
-    var connectionDropdown = document.getElementById('connection');
     var devicesInfo = {};  // Object to store device information
     var sudo_message = "{{ sudo_message }}";  // Ensure sudo_message is a string
 
@@ -3022,8 +3010,9 @@ function populateDeviceList() {
         .then(data => {
             console.log('data:', data);
             // Clear existing options
-            deviceDropdown.innerHTML = '';
-            connectionDropdown.innerHTML = '';
+            if (deviceDropdown) {
+                deviceDropdown.innerHTML = '';
+            }
 
             // Iterate through devices (UDIDs)
             Object.keys(data).forEach(udid => {
@@ -3074,16 +3063,7 @@ function populateDeviceList() {
 
 
 
-    // Checkbox visibility toggle
-    function toggleFuelTypeVisibility() {
-        var fuelTypeSection = document.getElementById('fuelTypeSection');
-        var fuelRegionSection = document.getElementById('fuelRegionSection');
-        var enableFuelPricesCheckbox = document.getElementById('enableFuelPrices');
-        if (fuelTypeSection && fuelRegionSection && enableFuelPricesCheckbox) {
-            fuelTypeSection.style.display = enableFuelPricesCheckbox.checked ? 'block' : 'none';
-            fuelRegionSection.style.display = enableFuelPricesCheckbox.checked ? 'block' : 'none';
-        }
-    }
+
 
 
 
@@ -3096,7 +3076,15 @@ function connectDevice() {
     var connectTextElement = document.getElementById('connectText');
     var spinnerElement = document.getElementById('spinner');
     var deviceDropdown = document.getElementById('device');
-    var selectedOptionValue = JSON.parse(document.getElementById('device').value);
+    if (!deviceDropdown || !deviceDropdown.value) {
+        if (typeof displayToast === 'function') {
+            displayToast("Please select a device first.");
+        } else if (typeof alert === 'function') {
+            alert("Please select a device first.");
+        }
+        return;
+    }
+    var selectedOptionValue = JSON.parse(deviceDropdown.value);
     console.log('device info:', deviceDropdown);
     console.log('selectedOptionValue: ', selectedOptionValue);
 
@@ -3114,8 +3102,6 @@ function connectDevice() {
     var selectedDeviceCountry = selectedOptionValue.userLocale;
     //var selectedDeviceWifiAddress = wifiAddress;
     var selectedDevicePlatform = "{{ current_platform }}";
-    var appVersionNum = "{{ app_version_num }}";
-    var appType = "{{ app_version_type }}";
 
     console.log('identifier: ', selectedDeviceIdentifier);
     console.log('connType: ', selectedDeviceConnectionType);
@@ -3133,7 +3119,6 @@ function connectDevice() {
 <!--    console.log('Device Class:', selectedDeviceClass);-->
 <!--    console.log('Connection:', selectedDeviceConnType);-->
 <!--    console.log('Platform:', selectedDevicePlatform);-->
-<!--    console.log('App Version:', appVersionNum);-->
 <!--    console.log('wifi address:', selectedDeviceWifiAddress);-->
 
 
@@ -3337,55 +3322,6 @@ function showModalWifiModeRequired() {
 
 
 
-    async function handleFuelTypeChange() {
-    var fuelTypeDropdown = document.getElementById('fuelType');
-    var fuelText = document.getElementById('fuelText');
-    var fuelRegionDropdown = document.getElementById('fuelRegion');
-    const selectedFuelRegion = fuelRegionDropdown.value;
-    const selectedFuelType = fuelTypeDropdown.value;
-    console.log('Selected Fuel Region = ', selectedFuelRegion);
-    fuelText.value = '';
-    fuelTypeDropdown.innerHTML = '';
-
-    try {
-        const response = await fetch(`/api/fuel_types?region=${selectedFuelRegion}`);
-        const fuelTypes = await response.json();
-        fuelTypes.sort();
-        fuelTypes.forEach(type => {
-            var option = document.createElement('option');
-            option.value = type;
-            option.text = type;
-            fuelTypeDropdown.add(option);
-        });
-        fuelTypeDropdown.value = selectedFuelType;
-        updateFuelText(selectedFuelType, selectedFuelRegion);
-    } catch (error) {
-        console.error('Error fetching fuel types:', error);
-    }
-}
-
-async function updateFuelText(selectedFuelType, selectedFuelRegion) {
-    var fuelTypeDropdown = document.getElementById('fuelType');
-    var fuelText = document.getElementById('fuelText');
-    var fuelDataCollapse = document.getElementById('fuelDataCollapse');
-    try {
-        const response = await fetch(`/api/data/${selectedFuelType}?region=${selectedFuelRegion}`);
-        const fuelTypeData = await response.json();
-        fuelText.value = `
-            Type: ${fuelTypeData.type}
-            Price: ${fuelTypeData.price}
-            Suburb: ${fuelTypeData.suburb}
-            State: ${fuelTypeData.state}
-            Lat: ${fuelTypeData.lat}
-            Lng: ${fuelTypeData.lng}
-        `;
-        setCoordinates(fuelTypeData.lat, fuelTypeData.lng);
-        handleSearch();
-        fuelDataCollapse.classList.toggle('show', !!fuelTypeData);
-    } catch (error) {
-        console.error('Error fetching fuel type data:', error);
-    }
-}
 
 function setLocationArrows() {
         fetch('/set_location', {
@@ -3503,12 +3439,6 @@ function setLocationArrows() {
         } catch (error) {
             console.error('Error during server shutdown:', error);
         }
-    }
-
-    function aboutApp() {
-        event.preventDefault();
-        var appVersion = "{{ app_version }}";
-        alert("App Version: " + appVersion);
     }
 
     // Function to show the modal
@@ -3670,8 +3600,6 @@ function continueAfterDeveloperModeRequired() {
     document.addEventListener('DOMContentLoaded', function () {
     console.log("test");
     initializeMap();
-    searchLocation();
-    handleFuelTypeChange();
     document.getElementById('rsdData').addEventListener('change', updateSetLocationButtonStatus);
     document.getElementById('coordinates').addEventListener('input', updateSetLocationButtonStatus);
     populateDeviceList();
@@ -3730,15 +3658,12 @@ function continueAfterDeveloperModeRequired() {
         </div>
     </div>
 
-    <!-- TODO: add your own donate button here -->
 </div>
 
 
 
     </div>
 </div>
-    <hr>
-Version: {{ app_version_num }}
 
 
 
@@ -3755,22 +3680,6 @@ Version: {{ app_version_num }}
             </div>
             <div class="modal-body">
                 Thank you for using the app!
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="aboutModalLabel">GeoPort</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                App Version: {{ app_version }}
             </div>
         </div>
     </div>

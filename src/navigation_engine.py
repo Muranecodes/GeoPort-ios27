@@ -217,19 +217,33 @@ class NavigationController:
 
     def _worker_loop(self) -> None:
         """
-        Background worker thread running at 1Hz (tick_interval) until stopped or completed.
+        Background worker thread running at 1Hz (tick_interval) with strict monotonic clock
+        pacing and anti-burst protection until stopped or completed.
         """
+        next_tick_time = time.monotonic() + self.tick_interval
         while not self._stop_event.is_set():
-            interrupted = self._stop_event.wait(timeout=self.tick_interval)
-            if interrupted or self._stop_event.is_set():
-                break
+            now = time.monotonic()
+            sleep_time = next_tick_time - now
+            if sleep_time > 0:
+                interrupted = self._stop_event.wait(timeout=sleep_time)
+                if interrupted or self._stop_event.is_set():
+                    break
+            else:
+                # If execution lagged, resync next_tick_time to avoid rapid catch-up bursts
+                next_tick_time = time.monotonic()
 
             if self.paused:
+                next_tick_time = time.monotonic() + self.tick_interval
                 continue
 
             active = self.step_tick(self.tick_interval)
             if not active:
                 break
+
+            # Advance next tick time; if behind current time, anchor to now + tick_interval
+            next_tick_time += self.tick_interval
+            if next_tick_time < time.monotonic():
+                next_tick_time = time.monotonic() + self.tick_interval
 
     def stop(self) -> Dict[str, float]:
         """
