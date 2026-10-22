@@ -881,9 +881,23 @@ async function initializeMap() {
         maxZoom: 20
     });
 
-    map.setView([25.0330, 121.5654], 4);
+    // Load saved starting point from browser storage if present
+    const savedLat = parseFloat(localStorage.getItem('geoport_starting_lat'));
+    const savedLng = parseFloat(localStorage.getItem('geoport_starting_lng'));
+    const savedZoom = parseInt(localStorage.getItem('geoport_starting_zoom'), 10);
+
+    const hasCustomStart = !isNaN(savedLat) && !isNaN(savedLng) && !isNaN(savedZoom) &&
+        savedLat >= -90 && savedLat <= 90 &&
+        savedLng >= -180 && savedLng <= 180 &&
+        savedZoom >= 1 && savedZoom <= 20;
+
+    const initialCenter = hasCustomStart ? [savedLat, savedLng] : [25.0330, 121.5654];
+    const initialZoom = hasCustomStart ? savedZoom : 4;
+
+    map.setView(initialCenter, initialZoom);
 
     map.on('dblclick', handleMapDoubleClick);
+    map.on('contextmenu', handleMapContextMenu);
     map.on('click', function(e) {
         if (window.isAutoNavMode) {
             handleAutoNavMapClick(e);
@@ -895,8 +909,8 @@ async function initializeMap() {
         }
     });
 
-    // Set the zoom level to 4
-    map.setZoom(4);
+    // Set the initial zoom level
+    map.setZoom(initialZoom);
 
     // // Use Stadia Maps as the tile layer
     // L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
@@ -1769,6 +1783,48 @@ function generatePopupContent(properties) {
 }
 
 
+
+// Function to handle map right-click context menu (setting starting point)
+function handleMapContextMenu(event) {
+    if (event.originalEvent) {
+        L.DomEvent.preventDefault(event.originalEvent);
+    }
+
+    const lat = event.latlng.lat;
+    const lng = event.latlng.lng;
+    const zoom = map.getZoom();
+
+    const menu = L.popup({
+        closeButton: true,
+        autoClose: true,
+        closeOnClick: true
+    });
+    menu.setLatLng(event.latlng);
+
+    const content = `
+        <div class="text-center p-1" style="min-width: 150px;">
+            <button type="button" class="btn btn-sm btn-primary w-100" onclick="saveStartingPoint(${lat}, ${lng}, ${zoom})">
+                <i class="lni lni-map-marker"></i> Set as starting point
+            </button>
+        </div>
+    `;
+
+    menu.setContent(content);
+    menu.openOn(map);
+}
+
+// Function to save the starting point coordinates and zoom to localStorage
+function saveStartingPoint(lat, lng, zoom) {
+    localStorage.setItem('geoport_starting_lat', lat.toString());
+    localStorage.setItem('geoport_starting_lng', lng.toString());
+    localStorage.setItem('geoport_starting_zoom', zoom.toString());
+
+    map.closePopup();
+
+    if (typeof displayToast === 'function') {
+        displayToast("Starting point saved");
+    }
+}
 
 // Function to handle marker right-click
 function handleMarkerRightClick(event) {
