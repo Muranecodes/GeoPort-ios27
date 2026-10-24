@@ -111,22 +111,12 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
 
     def test_update_speed_syncs_with_navigation_controller(self):
         """When an active navigation controller exists, updating speed notifies it."""
-        class MockNavController:
-            def __init__(self):
-                self.speed_kmh = 5.0
-                self.updated_speeds = []
-
-            def update_speed(self, speed):
-                self.speed_kmh = speed
-                self.updated_speeds.append(speed)
-
-        controller = MockNavController()
-        self.app.navigation_controller = controller
+        ctrl = main.get_navigation_controller()
+        self.app.navigation_controller = ctrl
 
         response = self.client.post("/update_speed", json={"speed_kmh": 35.0})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(controller.speed_kmh, 35.0)
-        self.assertEqual(controller.updated_speeds, [35.0])
+        self.assertEqual(ctrl.get_speed(), 35.0)
         self.assertEqual(main.get_current_speed(), 35.0)
 
 
@@ -137,16 +127,21 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
+        self.ctrl = main.get_navigation_controller()
+        self.ctrl.has_location = False
+        self.ctrl.min_step_interval = 0.0
         main.set_current_speed(5.0)
 
     def tearDown(self):
+        if hasattr(self, "ctrl") and self.ctrl is not None:
+            self.ctrl.stop()
         if hasattr(self.app, "navigation_controller"):
             delattr(self.app, "navigation_controller")
         main.set_current_speed(5.0)
 
     def test_move_step_uses_updated_speed_when_not_specified(self):
         """When speed_kmh is omitted in /move_step, it uses the active backend speed."""
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
 
         # Update speed to 20 km/h (Bike)
         res_speed = self.client.post("/update_speed", json={"speed_kmh": 20.0})
@@ -163,7 +158,7 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
 
     def test_move_step_uses_default_speed_initially(self):
         """Initial move_step without speed_kmh defaults to initial backend speed (5 km/h)."""
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         response = self.client.post("/move_step", json={"direction": "d"})
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
@@ -173,7 +168,7 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
 
     def test_move_step_dynamic_speed_transitions(self):
         """Successive steps dynamically adapt to new speeds set via /update_speed."""
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
 
         # Switch to Drive: 60 km/h
         self.client.post("/update_speed", json={"speed_kmh": 60.0})
@@ -189,7 +184,7 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
 
     def test_explicit_speed_overrides_backend_speed_without_altering_it(self):
         """Passing explicit speed_kmh in /move_step uses that speed for the single step."""
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         main.set_current_speed(60.0)
 
         # Explicit speed 10 km/h

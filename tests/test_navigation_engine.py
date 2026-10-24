@@ -561,7 +561,6 @@ class TestNavigationFlaskEndpoints(unittest.TestCase):
         # Attach test navigation controller
         self.test_controller = NavigationController(
             sink_provider=main.get_location_sink,
-            on_location_update=main._on_nav_location_update,
             tick_interval=1.0
         )
         self.app.navigation_controller = self.test_controller
