@@ -22,8 +22,13 @@ class TestKeyboardSteering(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
+        self.ctrl = main.get_navigation_controller()
+        self.ctrl.has_location = False
+        self.ctrl.min_step_interval = 0.0
 
     def tearDown(self):
+        if hasattr(self, "ctrl") and self.ctrl is not None:
+            self.ctrl.stop()
         if hasattr(self.app, "navigation_controller"):
             delattr(self.app, "navigation_controller")
 
@@ -31,7 +36,7 @@ class TestKeyboardSteering(unittest.TestCase):
         """Simulate holding 'W' (North) for 5 consecutive 1-second intervals at 5 km/h."""
         start_lat = 25.0330
         start_lng = 121.5654
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         speed_kmh = 5.0
         expected_step_m = speed_kmh / 3.6  # ~1.38889 meters per second
 
@@ -57,8 +62,8 @@ class TestKeyboardSteering(unittest.TestCase):
             self.assertEqual(len(self.mock_sink.locations), i + 1)
             self.assertEqual(self.mock_sink.last_location, (data["lat"], data["lng"]))
 
-            # Verify server global location updated
-            self.assertEqual(main.location, f"{data['lat']} {data['lng']}")
+            # Verify server controller location updated
+            self.assertEqual(self.ctrl.get_location_coords(), (data["lat"], data["lng"]))
 
             prev_lat = data["lat"]
             prev_lng = data["lng"]
@@ -71,7 +76,7 @@ class TestKeyboardSteering(unittest.TestCase):
         """Simulate steering switching directions: W -> D -> S -> A (box path)."""
         start_lat = 25.0330
         start_lng = 121.5654
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         speed_kmh = 10.0  # ~2.7778 m/s
         steps_per_leg = 3
 
@@ -79,7 +84,7 @@ class TestKeyboardSteering(unittest.TestCase):
         for _ in range(steps_per_leg):
             res = self.client.post("/move_step", json={"direction": "w", "speed_kmh": speed_kmh})
             self.assertEqual(res.status_code, 200)
-        north_lat, north_lng = map(float, main.location.split())
+        north_lat, north_lng = self.ctrl.get_location_coords()
         self.assertGreater(north_lat, start_lat)
         self.assertAlmostEqual(north_lng, start_lng, places=5)
 
@@ -87,7 +92,7 @@ class TestKeyboardSteering(unittest.TestCase):
         for _ in range(steps_per_leg):
             res = self.client.post("/move_step", json={"direction": "d", "speed_kmh": speed_kmh})
             self.assertEqual(res.status_code, 200)
-        east_lat, east_lng = map(float, main.location.split())
+        east_lat, east_lng = self.ctrl.get_location_coords()
         self.assertAlmostEqual(east_lat, north_lat, places=5)
         self.assertGreater(east_lng, north_lng)
 
@@ -95,7 +100,7 @@ class TestKeyboardSteering(unittest.TestCase):
         for _ in range(steps_per_leg):
             res = self.client.post("/move_step", json={"direction": "s", "speed_kmh": speed_kmh})
             self.assertEqual(res.status_code, 200)
-        south_lat, south_lng = map(float, main.location.split())
+        south_lat, south_lng = self.ctrl.get_location_coords()
         self.assertLess(south_lat, east_lat)
         self.assertAlmostEqual(south_lng, east_lng, places=5)
 
@@ -103,7 +108,7 @@ class TestKeyboardSteering(unittest.TestCase):
         for _ in range(steps_per_leg):
             res = self.client.post("/move_step", json={"direction": "a", "speed_kmh": speed_kmh})
             self.assertEqual(res.status_code, 200)
-        final_lat, final_lng = map(float, main.location.split())
+        final_lat, final_lng = self.ctrl.get_location_coords()
         self.assertAlmostEqual(final_lat, south_lat, places=5)
         self.assertLess(final_lng, south_lng)
 
@@ -118,7 +123,7 @@ class TestKeyboardSteering(unittest.TestCase):
         """Simulate dynamic speed adjustments (5 km/h -> 20 km/h -> 60 km/h) across steps."""
         start_lat = 25.0330
         start_lng = 121.5654
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
 
         # Step 1: Walking 5 km/h
         res1 = self.client.post("/move_step", json={"direction": "d", "speed_kmh": 5.0})
@@ -143,26 +148,20 @@ class TestKeyboardSteering(unittest.TestCase):
 
     def test_case_insensitive_direction_inputs(self):
         """Verify directions accept upper and lower case letters."""
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         for dir_key in ["w", "W", "a", "A", "s", "S", "d", "D"]:
             res = self.client.post("/move_step", json={"direction": dir_key, "speed_kmh": 5.0})
             self.assertEqual(res.status_code, 200)
 
     def test_keyboard_step_cancels_active_navigation(self):
         """Verify that any keyboard /move_step immediately interrupts active navigation."""
-        class MockNavigationController:
-            def __init__(self):
-                self.stopped = False
-            def stop(self):
-                self.stopped = True
-
-        controller = MockNavigationController()
-        self.app.navigation_controller = controller
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
+        self.ctrl.start([[25.0330, 121.5654], [25.0340, 121.5654]], speed_kmh=10.0)
+        self.assertTrue(self.ctrl.active)
 
         res = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 5.0})
         self.assertEqual(res.status_code, 200)
-        self.assertTrue(controller.stopped)
+        self.assertFalse(self.ctrl.active)
 
     def test_map_html_contains_keyboard_steering_implementation(self):
         """Verify that map.html contains required functions, event listeners, and contracts."""

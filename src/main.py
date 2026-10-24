@@ -53,14 +53,6 @@ from pymobiledevice3.lockdown import LockdownClient
 from pymobiledevice3.lockdown_service_provider import LockdownServiceProvider
 from pymobiledevice3.remote.common import TunnelProtocol
 from modern_location_client import ModernLocationController
-from geometry import (
-    calculate_step,
-    get_bearing_for_direction,
-    calculate_bearing,
-    calculate_polyline_distance,
-    interpolate_polyline,
-    validate_speed,
-)
 from location_sink import LocationSink, DvtLocationSink, MockLocationSink
 from navigation_engine import NavigationController
 
@@ -105,7 +97,6 @@ is_windows = sys.platform == 'win32'
 base_directory = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(sys.argv[0])))
 flask_port = 54321
 user_locale = None
-location = None
 rsd_data = None
 rsd_host = None
 rsd_port = None
@@ -427,15 +418,19 @@ def stop_tunnel_thread():
 
 @app.route('/update_location', methods=['POST'])
 def update_location():
-    # Use 'request' to get the JSON data from the client
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
-    # Convert latitude and longitude to float values
-    lat = float(data['lat'])
-    lng = float(data['lng'])
+    if 'lat' not in data or 'lng' not in data:
+        return jsonify({'error': "Missing 'lat' or 'lng' parameter"}), 400
 
-    global location
-    location = f"{lat} {lng}"
+    ctrl = get_navigation_controller()
+    try:
+        ctrl.set_location_coords(data['lat'], data['lng'])
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+
     return 'Location updated successfully'
 
 def check_pair_record(udid):
@@ -1119,14 +1114,8 @@ def get_location_sink() -> LocationSink:
     return app.config.get("LOCATION_SINK", current_location_sink)
 
 
-def _on_nav_location_update(lat: float, lng: float) -> None:
-    global location
-    location = f"{lat} {lng}"
-
-
 navigation_controller = NavigationController(
     sink_provider=get_location_sink,
-    on_location_update=_on_nav_location_update,
 )
 app.navigation_controller = navigation_controller
 
@@ -1136,47 +1125,22 @@ def get_navigation_controller() -> NavigationController:
     if ctrl is not None:
         return ctrl
     global navigation_controller
-    if navigation_controller is not None:
-        navigation_controller.speed_kmh = current_speed_kmh
-        app.navigation_controller = navigation_controller
-        return navigation_controller
-    navigation_controller = NavigationController(
-        sink_provider=get_location_sink,
-        on_location_update=_on_nav_location_update,
-    )
-    navigation_controller.speed_kmh = current_speed_kmh
+    if navigation_controller is None:
+        navigation_controller = NavigationController(
+            sink_provider=get_location_sink,
+        )
     app.navigation_controller = navigation_controller
     return navigation_controller
 
 
-current_speed_kmh: float = 5.0
-
-
 def set_current_speed(speed: float) -> None:
-    global current_speed_kmh
-    speed_float = validate_speed(speed)
-    current_speed_kmh = speed_float
-    app.config["CURRENT_SPEED_KMH"] = speed_float
-    ctrl = getattr(app, "navigation_controller", None)
-    if ctrl is None and "navigation_controller" in globals():
-        ctrl = globals()["navigation_controller"]
-    if ctrl is not None:
-        if hasattr(ctrl, "speed_kmh"):
-            ctrl.speed_kmh = speed_float
-        if hasattr(ctrl, "update_speed"):
-            try:
-                ctrl.update_speed(speed_float)
-            except Exception:
-                pass
+    ctrl = get_navigation_controller()
+    ctrl.update_speed(speed)
 
 
 def get_current_speed() -> float:
-    global current_speed_kmh
-    if hasattr(app, "navigation_controller") and getattr(app, "navigation_controller", None):
-        controller = getattr(app, "navigation_controller")
-        if hasattr(controller, "speed_kmh"):
-            return float(controller.speed_kmh)
-    return app.config.get("CURRENT_SPEED_KMH", current_speed_kmh)
+    ctrl = get_navigation_controller()
+    return ctrl.get_speed()
 
 
 @app.route('/update_speed', methods=['POST'])
@@ -1189,22 +1153,16 @@ def update_speed():
         if 'speed_kmh' not in data:
             return jsonify({'error': "Missing 'speed_kmh' parameter"}), 400
 
+        ctrl = get_navigation_controller()
         try:
-            speed_kmh = validate_speed(data.get('speed_kmh'))
+            updated_duration = ctrl.update_speed(data.get('speed_kmh'))
         except (ValueError, TypeError) as exc:
             return jsonify({'error': str(exc)}), 400
 
-        set_current_speed(speed_kmh)
-
-        ctrl = getattr(app, "navigation_controller", None)
-        updated_duration = 0.0
-        if ctrl is not None and getattr(ctrl, 'active', False):
-            updated_duration = getattr(ctrl, 'remaining_time_s', 0.0)
-
         resp = {
             'status': 'updated',
-            'speed_kmh': speed_kmh,
-            'updated_duration_s': updated_duration,
+            'speed_kmh': ctrl.get_speed(),
+            'updated_duration_s': updated_duration if (ctrl.active and not ctrl.completed) else 0.0,
         }
 
         return jsonify(resp), 200
@@ -1229,19 +1187,11 @@ def start_navigation():
             return jsonify({'error': "'waypoints' must contain at least 2 coordinate pairs"}), 400
 
         speed_kmh = data.get('speed_kmh')
-        if speed_kmh is None:
-            speed_kmh = get_current_speed()
-        else:
-            try:
-                speed_kmh = validate_speed(speed_kmh)
-            except (ValueError, TypeError) as exc:
-                return jsonify({'error': str(exc)}), 400
-
         ctrl = get_navigation_controller()
         result = ctrl.start(waypoints, speed_kmh)
         return jsonify(result), 200
 
-    except ValueError as ve:
+    except (ValueError, TypeError) as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         logger.exception("Error during /start_navigation")
@@ -1288,15 +1238,7 @@ def resume_navigation():
 def navigation_status():
     try:
         ctrl = get_navigation_controller()
-        status_data = ctrl.get_status()
-        if (status_data.get('current_lat') == 0.0 and status_data.get('current_lng') == 0.0) and location:
-            try:
-                lat_str, lng_str = location.split()
-                status_data['current_lat'] = float(lat_str)
-                status_data['current_lng'] = float(lng_str)
-            except Exception:
-                pass
-        return jsonify(status_data), 200
+        return jsonify(ctrl.get_status()), 200
     except Exception as e:
         logger.exception("Error during /navigation_status")
         return jsonify({'error': str(e)}), 500
@@ -1306,21 +1248,18 @@ def navigation_status():
 def set_location():
     try:
         global rsd_data, rsd_host, rsd_port
-        global location
         global udid, connection_type
         global ios_version
 
-        if location is None:
+        ctrl = get_navigation_controller()
+        if not ctrl.has_location:
             return jsonify({'error': 'Location is not set'}), 400
 
         sink = get_location_sink()
         if isinstance(sink, DvtLocationSink) and ios_version is None:
-            # Invalid ios_version
             return jsonify({'error': 'No iOS version present'}), 400
 
-        # Split the location string into latitude and longitude
-        latitude, longitude = map(float, location.split())
-        sink.set_location(latitude, longitude)
+        ctrl.dispatch_current_location()
         return 'DVT set call completed; check the phone location'
 
     except Exception as e:
@@ -1332,71 +1271,28 @@ def set_location():
 def move_step():
     try:
         data = request.get_json(silent=True)
-        if not data:
+        if not data or not isinstance(data, dict):
             return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
         direction = data.get('direction')
         if not direction:
             return jsonify({'error': "Missing 'direction' parameter"}), 400
 
+        ctrl = get_navigation_controller()
         try:
-            get_bearing_for_direction(direction)
+            result = ctrl.step_manual(
+                direction,
+                speed_kmh=data.get('speed_kmh'),
+                lat=data.get('lat'),
+                lng=data.get('lng'),
+            )
         except ValueError as ve:
             return jsonify({'error': str(ve)}), 400
 
-        speed_kmh = data.get('speed_kmh')
-        if speed_kmh is None:
-            speed_kmh = get_current_speed()
-        else:
-            try:
-                speed_kmh = validate_speed(speed_kmh)
-            except (ValueError, TypeError) as exc:
-                return jsonify({'error': str(exc)}), 400
-
-        global location
-        if 'lat' in data and 'lng' in data:
-            try:
-                cur_lat = float(data['lat'])
-                cur_lng = float(data['lng'])
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Invalid lat/lng provided in request'}), 400
-        elif location is not None:
-            try:
-                cur_lat, cur_lng = map(float, location.split())
-            except Exception:
-                return jsonify({'error': 'Failed to parse current location'}), 400
-        else:
-            ctrl = get_navigation_controller()
-            if ctrl is not None and getattr(ctrl, 'active', False):
-                cur_lat = ctrl.current_lat
-                cur_lng = ctrl.current_lng
-            else:
-                return jsonify({'error': 'Current location is not set'}), 400
-
-        # Stop active auto navigation if running
-        ctrl = get_navigation_controller()
-        if ctrl is not None:
-            try:
-                ctrl.stop()
-            except Exception:
-                pass
-
-        # Calculate 1-second displacement
-        new_lat, new_lng, distance_meters = calculate_step(
-            cur_lat, cur_lng, direction, speed_kmh, duration_seconds=1.0
-        )
-
-        # Update active location
-        location = f"{new_lat} {new_lng}"
-
-        # Dispatch to location sink
-        sink = get_location_sink()
-        sink.set_location(new_lat, new_lng)
-
         return jsonify({
-            'lat': new_lat,
-            'lng': new_lng,
-            'distance_m': distance_meters
+            'lat': result['lat'],
+            'lng': result['lng'],
+            'distance_m': result['distance_m'],
         }), 200
 
     except Exception as e:
