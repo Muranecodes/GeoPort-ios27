@@ -1125,33 +1125,22 @@ def get_navigation_controller() -> NavigationController:
     if ctrl is not None:
         return ctrl
     global navigation_controller
-    if navigation_controller is not None:
-        app.navigation_controller = navigation_controller
-        return navigation_controller
-    navigation_controller = NavigationController(
-        sink_provider=get_location_sink,
-    )
+    if navigation_controller is None:
+        navigation_controller = NavigationController(
+            sink_provider=get_location_sink,
+        )
     app.navigation_controller = navigation_controller
     return navigation_controller
 
 
 def set_current_speed(speed: float) -> None:
     ctrl = get_navigation_controller()
-    if hasattr(ctrl, "update_speed"):
-        ctrl.update_speed(speed)
-    elif hasattr(ctrl, "speed_kmh"):
-        ctrl.speed_kmh = float(speed)
-    speed_val = ctrl.get_speed() if hasattr(ctrl, "get_speed") else getattr(ctrl, "speed_kmh", float(speed))
-    app.config["CURRENT_SPEED_KMH"] = speed_val
+    ctrl.update_speed(speed)
 
 
 def get_current_speed() -> float:
     ctrl = get_navigation_controller()
-    if hasattr(ctrl, "get_speed"):
-        return ctrl.get_speed()
-    if hasattr(ctrl, "speed_kmh"):
-        return float(ctrl.speed_kmh)
-    return float(app.config.get("CURRENT_SPEED_KMH", 5.0))
+    return ctrl.get_speed()
 
 
 @app.route('/update_speed', methods=['POST'])
@@ -1169,8 +1158,6 @@ def update_speed():
             updated_duration = ctrl.update_speed(data.get('speed_kmh'))
         except (ValueError, TypeError) as exc:
             return jsonify({'error': str(exc)}), 400
-
-        set_current_speed(data.get('speed_kmh'))
 
         resp = {
             'status': 'updated',
@@ -1200,9 +1187,6 @@ def start_navigation():
             return jsonify({'error': "'waypoints' must contain at least 2 coordinate pairs"}), 400
 
         speed_kmh = data.get('speed_kmh')
-        if speed_kmh is None:
-            speed_kmh = get_current_speed()
-
         ctrl = get_navigation_controller()
         result = ctrl.start(waypoints, speed_kmh)
         return jsonify(result), 200

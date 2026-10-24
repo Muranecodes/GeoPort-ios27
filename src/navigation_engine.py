@@ -52,14 +52,12 @@ class NavigationController:
         self,
         sink: Optional[LocationSink] = None,
         sink_provider: Optional[Callable[[], LocationSink]] = None,
-        on_location_update: Optional[Callable[[float, float], None]] = None,
         tick_interval: float = 1.0,
         clock: Callable[[], float] = time.monotonic,
         min_step_interval: float = 0.95,
     ) -> None:
         self._sink = sink
         self._sink_provider = sink_provider
-        self.on_location_update = on_location_update
         self.tick_interval = tick_interval
         self._clock = clock
         self.min_step_interval = min_step_interval
@@ -114,6 +112,18 @@ class NavigationController:
                 return None
             return self.current_lat, self.current_lng
 
+    def _dispatch(self, lat: float, lng: float) -> None:
+        """
+        Dispatches coordinates to the active LocationSink (if available),
+        logging any exceptions without raising.
+        """
+        target_sink = self.sink
+        if target_sink is not None:
+            try:
+                target_sink.set_location(lat, lng)
+            except Exception as e:
+                logger.exception("Error dispatching location to sink: %s", e)
+
     def dispatch_current_location(self) -> Tuple[float, float]:
         """
         Raises ValueError("Location is not set") if not has_location;
@@ -126,19 +136,7 @@ class NavigationController:
             lat, lng = self.current_lat, self.current_lng
             self._last_dispatch_time = self._clock()
 
-        target_sink = self.sink
-        if target_sink is not None:
-            try:
-                target_sink.set_location(lat, lng)
-            except Exception as e:
-                logger.exception("Error dispatching current location to sink: %s", e)
-
-        if self.on_location_update is not None:
-            try:
-                self.on_location_update(lat, lng)
-            except Exception as e:
-                logger.exception("Error calling on_location_update: %s", e)
-
+        self._dispatch(lat, lng)
         return lat, lng
 
     def get_speed(self) -> float:
@@ -180,7 +178,7 @@ class NavigationController:
         - Enforces monotonic anti-burst pacing (ADR 0001): if time elapsed since _last_dispatch_time < min_step_interval,
           drops the burst displacement and returns {"lat": cur_lat, "lng": cur_lng, "distance_m": 0.0} without dispatching.
         - Otherwise computes 1-second spherical displacement, updates location, sets _last_dispatch_time = clock(),
-          dispatches to LocationSink and on_location_update, and returns {"lat": new_lat, "lng": new_lng, "distance_m": distance_meters}.
+          dispatches to LocationSink, and returns {"lat": new_lat, "lng": new_lng, "distance_m": distance_meters}.
         """
         if not direction:
             raise ValueError("Direction must be specified.")
@@ -194,11 +192,7 @@ class NavigationController:
                 step_speed = self.speed_kmh
 
         if lat is not None and lng is not None:
-            cur_lat, cur_lng = _validate_coords(lat, lng)
-            with self._lock:
-                self.current_lat = cur_lat
-                self.current_lng = cur_lng
-                self.has_location = True
+            cur_lat, cur_lng = self.set_location_coords(lat, lng)
         elif lat is not None or lng is not None:
             raise ValueError("Both lat and lng must be provided if overriding coordinates.")
         else:
@@ -232,18 +226,7 @@ class NavigationController:
             self.has_location = True
             self._last_dispatch_time = now
 
-        target_sink = self.sink
-        if target_sink is not None:
-            try:
-                target_sink.set_location(new_lat, new_lng)
-            except Exception as e:
-                logger.exception("Error dispatching manual step to sink: %s", e)
-
-        if self.on_location_update is not None:
-            try:
-                self.on_location_update(new_lat, new_lng)
-            except Exception as e:
-                logger.exception("Error calling on_location_update: %s", e)
+        self._dispatch(new_lat, new_lng)
 
         return {
             "lat": new_lat,
@@ -254,7 +237,7 @@ class NavigationController:
     def start(
         self,
         waypoints: List[Union[List[float], Tuple[float, float]]],
-        speed_kmh: float = 5.0,
+        speed_kmh: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Stops any existing navigation, initializes route state, and starts the 1Hz background worker thread.
@@ -280,7 +263,11 @@ class NavigationController:
         if len(clean_pts) < 2:
             raise ValueError("Waypoints must contain at least 2 coordinate pairs.")
 
-        speed = validate_speed(speed_kmh)
+        if speed_kmh is None:
+            with self._lock:
+                speed = self.speed_kmh
+        else:
+            speed = validate_speed(speed_kmh)
 
         total_dist = calculate_polyline_distance(clean_pts)
         speed_mps = speed / 3.6
@@ -301,6 +288,7 @@ class NavigationController:
             self.completed = False
             self._stop_event.clear()
             self._last_dispatch_time = self._clock()
+            init_lat, init_lng = self.current_lat, self.current_lng
 
         if total_dist == 0:
             with self._lock:
@@ -308,34 +296,15 @@ class NavigationController:
                 self.completed = True
                 self.remaining_distance_m = 0.0
                 self.remaining_time_s = 0.0
-            target_sink = self.sink
-            if target_sink is not None:
-                try:
-                    target_sink.set_location(self.current_lat, self.current_lng)
-                except Exception as e:
-                    logger.exception("Error setting initial sink location: %s", e)
-            if self.on_location_update is not None:
-                try:
-                    self.on_location_update(self.current_lat, self.current_lng)
-                except Exception as e:
-                    logger.exception("Error calling on_location_update: %s", e)
+                self._last_dispatch_time = self._clock()
+            self._dispatch(init_lat, init_lng)
             return {
                 "status": "started",
                 "total_distance_m": 0.0,
                 "estimated_duration_s": 0.0,
             }
 
-        target_sink = self.sink
-        if target_sink is not None:
-            try:
-                target_sink.set_location(self.current_lat, self.current_lng)
-            except Exception as e:
-                logger.exception("Error setting initial sink location: %s", e)
-        if self.on_location_update is not None:
-            try:
-                self.on_location_update(self.current_lat, self.current_lng)
-            except Exception as e:
-                logger.exception("Error calling on_location_update: %s", e)
+        self._dispatch(init_lat, init_lng)
 
         self._thread = threading.Thread(
             target=self._worker_loop,
@@ -394,18 +363,7 @@ class NavigationController:
 
             self._last_dispatch_time = self._clock()
 
-        target_sink = self.sink
-        if target_sink is not None:
-            try:
-                target_sink.set_location(target_lat, target_lng)
-            except Exception as e:
-                logger.exception("Error dispatching location in navigation tick: %s", e)
-
-        if self.on_location_update is not None:
-            try:
-                self.on_location_update(target_lat, target_lng)
-            except Exception as e:
-                logger.exception("Error in navigation on_location_update: %s", e)
+        self._dispatch(target_lat, target_lng)
 
         return not finished
 
@@ -487,5 +445,4 @@ class NavigationController:
                 "remaining_distance_m": round(self.remaining_distance_m, 1),
                 "remaining_time_s": round(self.remaining_time_s, 1),
                 "completed": self.completed,
-                "has_location": self.has_location,
             }

@@ -119,6 +119,26 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         self.assertEqual(ctrl.get_speed(), 35.0)
         self.assertEqual(main.get_current_speed(), 35.0)
 
+    def test_update_speed_calls_controller_update_speed_once(self):
+        """POST /update_speed invokes NavigationController.update_speed exactly once."""
+        ctrl = main.get_navigation_controller()
+        call_count = 0
+        original_update = ctrl.update_speed
+
+        def wrapped_update(speed):
+            nonlocal call_count
+            call_count += 1
+            return original_update(speed)
+
+        ctrl.update_speed = wrapped_update
+        try:
+            response = self.client.post("/update_speed", json={"speed_kmh": 42.0})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(call_count, 1)
+            self.assertEqual(ctrl.get_speed(), 42.0)
+        finally:
+            ctrl.update_speed = original_update
+
 
 class TestMoveStepFallbackSpeed(unittest.TestCase):
     def setUp(self):

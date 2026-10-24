@@ -385,6 +385,22 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         self.assertAlmostEqual(status["current_lng"], p1[1], places=5)
         self.assertEqual(status["speed_kmh"], 18.0)
 
+    def test_start_without_speed_preserves_existing_preset(self):
+        """Starting navigation without explicit speed_kmh preserves existing speed preset (e.g. 19.1 km/h)."""
+        self.controller.update_speed(19.1)
+        p1 = (25.0330, 121.5654)
+        p2 = (25.0340, 121.5654)
+        total_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
+
+        result = self.controller.start([p1, p2])
+
+        self.assertEqual(result["status"], "started")
+        status = self.controller.get_status()
+        self.assertEqual(status["speed_kmh"], 19.1)
+        expected_eta = round(total_dist / (19.1 / 3.6), 1)
+        self.assertAlmostEqual(status["remaining_time_s"], expected_eta, places=1)
+        self.assertAlmostEqual(result["estimated_duration_s"], expected_eta, places=1)
+
     def test_step_tick_advances_distance_and_updates_sink(self):
         """step_tick advances distance by speed / 3.6 meters and dispatches to sink."""
         p1 = (0.0, 0.0)
@@ -592,6 +608,44 @@ class TestNavigationFlaskEndpoints(unittest.TestCase):
         self.assertTrue(status_data["active"])
         self.assertFalse(status_data["paused"])
         self.assertEqual(status_data["speed_kmh"], 20.0)
+
+    def test_start_navigation_endpoint_preserves_preset_speed_when_omitted(self):
+        """POST /start_navigation without speed_kmh preserves active speed preset (e.g. 19.1 km/h)."""
+        self.client.post("/update_speed", json={"speed_kmh": 19.1})
+        self.assertEqual(self.test_controller.get_speed(), 19.1)
+
+        waypoints = [
+            [25.0330, 121.5654],
+            [25.0350, 121.5654]
+        ]
+        response = self.client.post("/start_navigation", json={
+            "waypoints": waypoints
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["status"], "started")
+
+        status_resp = self.client.get("/navigation_status")
+        status_data = status_resp.get_json()
+        self.assertEqual(status_data["speed_kmh"], 19.1)
+
+    def test_navigation_status_schema(self):
+        """GET /navigation_status matches exact schema and does not leak internal has_location flag."""
+        status_resp = self.client.get("/navigation_status")
+        self.assertEqual(status_resp.status_code, 200)
+        data = status_resp.get_json()
+        expected_keys = {
+            "active",
+            "paused",
+            "current_lat",
+            "current_lng",
+            "speed_kmh",
+            "remaining_distance_m",
+            "remaining_time_s",
+            "completed",
+        }
+        self.assertEqual(set(data.keys()), expected_keys)
+        self.assertNotIn("has_location", data)
 
     def test_start_navigation_missing_or_invalid_waypoints_returns_400(self):
         """Validates payload error handling."""
