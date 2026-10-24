@@ -181,32 +181,37 @@ class TestMoveStepEndpoint(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
+        self.ctrl = main.get_navigation_controller()
+        self.ctrl.has_location = False
+        self.ctrl.min_step_interval = 0.0
 
     def tearDown(self):
+        if hasattr(self, "ctrl") and self.ctrl is not None:
+            self.ctrl.stop()
         if hasattr(self.app, "navigation_controller"):
             delattr(self.app, "navigation_controller")
 
     def test_move_step_without_location_returns_400(self):
-        main.location = None
+        self.ctrl.has_location = False
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 5.0})
         self.assertEqual(response.status_code, 400)
         data = response.get_json()
         self.assertIn("error", data)
 
     def test_move_step_empty_or_non_json_returns_400(self):
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         response = self.client.post("/move_step", data="non-json content", content_type="text/plain")
         self.assertEqual(response.status_code, 400)
 
     def test_move_step_invalid_direction_returns_400(self):
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         response = self.client.post("/move_step", json={"direction": "invalid", "speed_kmh": 5.0})
         self.assertEqual(response.status_code, 400)
         data = response.get_json()
         self.assertIn("error", data)
 
     def test_move_step_invalid_speed_returns_400(self):
-        main.location = "25.0330 121.5654"
+        self.ctrl.set_location_coords(25.0330, 121.5654)
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": -10.0})
         self.assertEqual(response.status_code, 400)
 
@@ -220,7 +225,7 @@ class TestMoveStepEndpoint(unittest.TestCase):
     def test_move_step_north_dispatches_and_updates_location(self):
         start_lat = 25.0330
         start_lng = 121.5654
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         speed_kmh = 36.0  # 10 m/s
 
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": speed_kmh})
@@ -238,8 +243,8 @@ class TestMoveStepEndpoint(unittest.TestCase):
         self.assertEqual(len(self.mock_sink.locations), 1)
         self.assertEqual(self.mock_sink.last_location, (data["lat"], data["lng"]))
 
-        # Check that server's main.location is updated
-        self.assertEqual(main.location, f"{data['lat']} {data['lng']}")
+        # Check that server's controller location is updated
+        self.assertEqual(self.ctrl.get_location_coords(), (data["lat"], data["lng"]))
 
     def test_move_step_all_cardinal_directions(self):
         start_lat = 25.0330
@@ -247,19 +252,19 @@ class TestMoveStepEndpoint(unittest.TestCase):
         speed_kmh = 18.0  # 5 m/s
 
         # Test South
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res_s = self.client.post("/move_step", json={"direction": "s", "speed_kmh": speed_kmh})
         self.assertEqual(res_s.status_code, 200)
         self.assertLess(res_s.get_json()["lat"], start_lat)
 
         # Test East
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res_d = self.client.post("/move_step", json={"direction": "d", "speed_kmh": speed_kmh})
         self.assertEqual(res_d.status_code, 200)
         self.assertGreater(res_d.get_json()["lng"], start_lng)
 
         # Test West
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res_a = self.client.post("/move_step", json={"direction": "a", "speed_kmh": speed_kmh})
         self.assertEqual(res_a.status_code, 200)
         self.assertLess(res_a.get_json()["lng"], start_lng)
@@ -268,26 +273,26 @@ class TestMoveStepEndpoint(unittest.TestCase):
         start_lat, start_lng = 25.0330, 121.5654
 
         # Walking 5 km/h
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 5.0})
         self.assertEqual(res.status_code, 200)
         self.assertAlmostEqual(res.get_json()["distance_m"], 5.0 / 3.6, places=4)
 
         # Cycling 20 km/h
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 20.0})
         self.assertEqual(res.status_code, 200)
         self.assertAlmostEqual(res.get_json()["distance_m"], 20.0 / 3.6, places=4)
 
         # Driving 60 km/h
-        main.location = f"{start_lat} {start_lng}"
+        self.ctrl.set_location_coords(start_lat, start_lng)
         res = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 60.0})
         self.assertEqual(res.status_code, 200)
         self.assertAlmostEqual(res.get_json()["distance_m"], 60.0 / 3.6, places=4)
 
     def test_move_step_with_provided_coordinates(self):
         # Endpoint can also accept 'lat' and 'lng' in request body
-        main.location = None
+        self.ctrl.has_location = False
         speed_kmh = 36.0
         response = self.client.post(
             "/move_step",
@@ -299,26 +304,58 @@ class TestMoveStepEndpoint(unittest.TestCase):
         self.assertEqual(self.mock_sink.last_location, (data["lat"], data["lng"]))
 
     def test_move_step_interrupts_active_navigation(self):
-        class DummyNavigationController:
-            def __init__(self):
-                self.stopped = False
+        self.ctrl.set_location_coords(25.0330, 121.5654)
+        self.ctrl.start([[25.0330, 121.5654], [25.0340, 121.5654]], speed_kmh=10.0)
+        self.assertTrue(self.ctrl.active)
 
-            def stop(self):
-                self.stopped = True
-
-        dummy_controller = DummyNavigationController()
-        self.app.navigation_controller = dummy_controller
-
-        main.location = "25.0330 121.5654"
         response = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 5.0})
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(dummy_controller.stopped)
+        self.assertFalse(self.ctrl.active)
 
     def test_set_location_delegates_to_sink(self):
-        main.location = "35.6762 139.6503"
+        self.ctrl.set_location_coords(35.6762, 139.6503)
         response = self.client.post("/set_location")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.mock_sink.last_location, (35.6762, 139.6503))
+
+    def test_set_location_without_location_returns_400(self):
+        self.ctrl.has_location = False
+        response = self.client.post("/set_location")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json(), {'error': 'Location is not set'})
+
+    def test_set_location_dvt_without_ios_version_returns_400(self):
+        self.ctrl.set_location_coords(35.6762, 139.6503)
+        dvt_sink = DvtLocationSink()
+        main.set_location_sink(dvt_sink)
+        orig_ios = main.ios_version
+        try:
+            main.ios_version = None
+            response = self.client.post("/set_location")
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.get_json(), {'error': 'No iOS version present'})
+        finally:
+            main.ios_version = orig_ios
+
+    def test_update_location_success(self):
+        response = self.client.post("/update_location", json={"lat": 37.7749, "lng": -122.4194})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(as_text=True), 'Location updated successfully')
+        self.assertTrue(self.ctrl.has_location)
+        self.assertEqual(self.ctrl.get_location_coords(), (37.7749, -122.4194))
+
+    def test_update_location_missing_or_invalid_coords(self):
+        res1 = self.client.post("/update_location", data="bad", content_type="text/plain")
+        self.assertEqual(res1.status_code, 400)
+
+        res2 = self.client.post("/update_location", json={"lat": 37.7749})
+        self.assertEqual(res2.status_code, 400)
+
+        res3 = self.client.post("/update_location", json={"lat": "invalid", "lng": -122.4194})
+        self.assertEqual(res3.status_code, 400)
+
+        res4 = self.client.post("/update_location", json={"lat": 100.0, "lng": -122.4194})
+        self.assertEqual(res4.status_code, 400)
 
 
 if __name__ == "__main__":

@@ -383,7 +383,7 @@ class TestAutoNavLifecycleIntegration(unittest.TestCase):
     def test_start_navigation_with_waypoints_and_polling(self):
         """Full lifecycle: start navigation, poll status, and verify active worker."""
         # Start at Taipei 101
-        main.location = "25.0330 121.5654"
+        main.get_navigation_controller().set_location_coords(25.0330, 121.5654)
         self.mock_sink.set_location(25.0330, 121.5654)
 
         waypoints = [
