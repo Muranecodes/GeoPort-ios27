@@ -1,6 +1,6 @@
 # Spec: Cute Minimalist Web UI Redesign (「花徑漫步」簡約可愛介面重設計)
 
-Status: ready-for-agent
+Status: completed
 
 ## Problem Statement
 
