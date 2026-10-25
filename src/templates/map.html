@@ -853,6 +853,53 @@ body.dark-mode .hud-stat-value {
     gap: 6px;
 }
 
+/* Navigation HUD Status Badge - Botanical Pill Styling */
+#navStatusBadge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.3px;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+}
+
+#navStatusBadge.badge-success,
+#navStatusBadge.bg-success,
+.badge-success {
+    background-color: var(--accent-primary, #6B9E78) !important;
+    color: #ffffff !important;
+    border-color: var(--accent-primary, #6B9E78) !important;
+    box-shadow: 0 2px 6px rgba(107, 158, 120, 0.3);
+}
+
+#navStatusBadge.badge-warning,
+#navStatusBadge.bg-warning,
+.badge-warning {
+    background-color: #E8A850 !important;
+    color: #ffffff !important;
+    border-color: #E8A850 !important;
+    box-shadow: 0 2px 6px rgba(232, 168, 80, 0.3);
+}
+
+body.dark-mode #navStatusBadge.badge-success,
+body.dark-mode #navStatusBadge.bg-success,
+body.dark-mode .badge-success {
+    background-color: var(--accent-primary, #7FB38D) !important;
+    color: #1E2522 !important;
+    border-color: var(--accent-primary, #7FB38D) !important;
+    box-shadow: 0 2px 6px rgba(127, 179, 141, 0.35);
+}
+
+body.dark-mode #navStatusBadge.badge-warning,
+body.dark-mode #navStatusBadge.bg-warning,
+body.dark-mode .badge-warning {
+    background-color: #F3BA64 !important;
+    color: #1E2522 !important;
+    border-color: #F3BA64 !important;
+    box-shadow: 0 2px 6px rgba(243, 186, 100, 0.35);
+}
+
     </style>
 </head>
 
@@ -905,9 +952,9 @@ body.dark-mode .hud-stat-value {
                 <span id="speedDisplayBadge" class="badge">5 km/h</span>
             </div>
             <div class="speed-presets-group" role="group" aria-label="Speed Presets">
-                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)" title="Walk (5 km/h)">🚶 散步<span class="d-none">Walk (5 km/h)</span></button>
-                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)" title="🌸 種花 (19.1 km/h)">🌸 種花<span class="d-none">19.1 km/h</span></button>
-                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)" title="Drive (60 km/h)">🚗 開車<span class="d-none">Drive (60 km/h)</span></button>
+                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)" title="Walk (5 km/h)">🚶 散步 (5 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)" title="🌸 種花 (19.1 km/h)">🌸 種花 (19.1 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)" title="Drive (60 km/h)">🚗 開車 (60 km/h)</button>
             </div>
             <div class="speed-inputs-row">
                 <div class="speed-slider-wrap">
@@ -925,7 +972,7 @@ body.dark-mode .hud-stat-value {
             <div class="card-body p-2">
                 <div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
                     <span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
-                    <span id="navStatusBadge" class="badge badge-success">運行中</span>
+                    <span id="navStatusBadge" class="badge badge-success bg-success">運行中</span>
                 </div>
                 <div class="hud-stats-row mb-2">
                     <div class="hud-stat-item">
@@ -954,8 +1001,8 @@ body.dark-mode .hud-stat-value {
     <!-- Tier 3: Bottom Bento Bar -->
     <footer class="bento-card bento-bottom-bar">
         <div class="search-cluster">
-            <input type="text" class="form-control form-control-sm bento-input" id="coordinates" placeholder="🔍 輸入座標或地名…">
-            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="search" onclick="handleSearch()">搜尋</button>
+            <input type="text" class="form-control form-control-sm bento-input" id="coordinates" placeholder="🔍 輸入座標 (lat, lng) 或搜尋地名…">
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="search" onclick="handleSearch()">🔍 搜尋</button>
         </div>
         <div class="simulation-cluster">
             <button type="button" class="btn btn-sm btn-bento-pill-success text-nowrap" data-toggle="popover" id="set-location" disabled onclick="setLocation()">📍 開始定位</button>
@@ -1119,8 +1166,14 @@ L.leafletMenu = function(a, b) {
 
 
 
-    if (connectTextElement && rsdDataElement) {
-        rsdDataElement.style.display = (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected") ? 'block' : 'none';
+    function isDeviceConnected() {
+        const el = document.getElementById('connectText');
+        return el && (el.innerText === "✅ 已連線" || el.innerText === "Connected");
+    }
+    window.isDeviceConnected = isDeviceConnected;
+
+    if (rsdDataElement) {
+        rsdDataElement.style.display = isDeviceConnected() ? 'block' : 'none';
     }
 
 
@@ -2686,10 +2739,10 @@ function updateNavHud(data) {
     }
     if (statusBadge) {
         if (data.paused) {
-            statusBadge.className = 'badge badge-warning';
+            statusBadge.className = 'badge badge-warning bg-warning';
             statusBadge.textContent = '已暫停';
         } else {
-            statusBadge.className = 'badge badge-success';
+            statusBadge.className = 'badge badge-success bg-success';
             statusBadge.textContent = '運行中';
         }
     }
@@ -2828,7 +2881,7 @@ function toggleNavPause() {
         }
         if (statusBadge) {
             statusBadge.textContent = window.navPaused ? '已暫停' : '運行中';
-            statusBadge.className = window.navPaused ? 'badge badge-warning' : 'badge badge-success';
+            statusBadge.className = window.navPaused ? 'badge badge-warning bg-warning' : 'badge badge-success bg-success';
         }
         return data;
     })
@@ -3558,7 +3611,7 @@ function connectDevice() {
         connectTextElement.innerText = "連線中，請稍候…";
     }
     // Hide the connectText and show the spinner only if not already connected
-    if (connectTextElement && spinnerElement && connectTextElement.innerText !== "✅ 已連線" && connectTextElement.innerText !== "Connected") {
+    if (connectTextElement && spinnerElement && !isDeviceConnected()) {
         connectTextElement.style.display = 'inline-block'; // Display the text
         spinnerElement.style.display = 'inline-block'; // Display the spinner
     }
@@ -3631,7 +3684,7 @@ function connectDevice() {
             connectButton.disabled = true;  // Disable the button
         }
 
-        if (spinnerElement && (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected")) {
+        if (spinnerElement && isDeviceConnected()) {
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
@@ -3651,7 +3704,7 @@ function connectDevice() {
                     if ('rsd_data' in data) {
                         rsdDataElement.value = data.rsd_data;
 
-                        if (connectTextElement && (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected")) {
+                        if (isDeviceConnected()) {
                             //rsdDataElement.style.display = 'block';  // Make rsdData visible
                             updateSetLocationButtonStatus();
                             updateStopLocationButtonStatus();  // Add this line to update the Stop Location button status
@@ -3717,7 +3770,7 @@ function showModalWifiModeRequired() {
         // Use navigator.sendBeacon to make the POST request without waiting for a response
         const data = JSON.stringify({});
         //navigator.sendBeacon('/stop_tunnel', data);
-        console.log('Disconnect - Clearing');
+        console.log('Disconnect - Clearing, was connected:', isDeviceConnected());
 
         var setLocationButton = document.getElementById('set-location');
         var stopLocationButton = document.getElementById('stop-location');

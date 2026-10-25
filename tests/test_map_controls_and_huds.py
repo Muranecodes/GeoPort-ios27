@@ -161,9 +161,9 @@ class TestMapControlsAndHuds(unittest.TestCase):
             check=True
         )
         data = json.loads(result.stdout)
-        # When 19.1 is set, planting-mode-active must be true on widget and bike preset active
+        # When 19.1 is set, planting-mode-active must be true on widget and Planting Speed preset active
         self.assertTrue(data["planting"]["widgetPlantingActive"], "widget must have planting-mode-active when speed is 19.1")
-        self.assertTrue(data["planting"]["bikeActive"], "bike preset must be active when speed is 19.1")
+        self.assertTrue(data["planting"]["bikeActive"], "Planting Speed preset must be active when speed is 19.1")
         self.assertFalse(data["planting"]["walkActive"])
 
         # When 5.0 is set, planting-mode-active must be false

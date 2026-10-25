@@ -93,17 +93,18 @@ class TestBentoThemeLocalization(unittest.TestCase):
         self.assertIn("🚪 離開", html)
 
         # Bottom Bar labels
-        self.assertIn("🔍 輸入座標或地名…", html)
-        self.assertIn("搜尋", html)
+        self.assertIn("🔍 輸入座標 (lat, lng) 或搜尋地名…", html)
+        self.assertIn("🔍 搜尋", html)
         self.assertIn("📍 開始定位", html)
         self.assertIn("🛑 停止定位", html)
 
         # Context menu starting point
         self.assertIn("📌 設為預設起點", html)
 
-        # Connection states
+        # Connection states and helper
         self.assertIn("連線中，請稍候…", html)
         self.assertIn("✅ 已連線", html)
+        self.assertIn("function isDeviceConnected", self.content)
 
         # Toast headers & modals
         self.assertIn("伺服器已關閉", html)
