@@ -1330,15 +1330,19 @@ async function initializeMap() {
     // }).addTo(map);
 
 
-    // Add default tile layer
-    CartoDB_Voyager.addTo(map);
+    // Add default tile layer (OpenStreetMap - 100% free, zero API key needed)
+    openStreetMapTileLayer.addTo(map);
 
     // Define tile layer control options
     var baseLayers = {
-        "Stadia Maps": stadiaTileLayer,
         "OpenStreetMap": openStreetMapTileLayer,
+        "Esri World Street Map": Esri_WorldStreetMap,
+        "Esri World Topo Map": Esri_WorldTopoMap,
+        "Esri World Imagery": Esri_WorldImagery,
         "OpenStreetMap_HOT": OpenStreetMap_HOT,
         "OPNVKarte": OPNVKarte,
+        "CartoDB Voyager (需API Key)": CartoDB_Voyager,
+        "Stadia Maps (需API Key)": stadiaTileLayer,
         "Stadia Alidade Smooth": Stadia_AlidadeSmooth,
         "Stadia Alidade Smooth Dark": Stadia_AlidadeSmoothDark,
         "Stadia Alidade Satellite": Stadia_AlidadeSatellite,
@@ -1346,12 +1350,6 @@ async function initializeMap() {
         "Stadia Stamen Toner": Stadia_StamenToner,
         "Stadia Stamen Watercolor": Stadia_StamenWatercolor,
         "Stadia Stamen Terrain": Stadia_StamenTerrain,
-        "Esri World Street Map": Esri_WorldStreetMap,
-        "Esri World Topo Map": Esri_WorldTopoMap,
-        "Esri World Imagery": Esri_WorldImagery,
-        "CartoDB Voyager": CartoDB_Voyager,
-
-
     };
 
     // Add layer control to map

@@ -24,17 +24,16 @@ class TestMapControlsAndHuds(unittest.TestCase):
         self.template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
         self.content = self.template_path.read_text(encoding="utf-8")
 
-    def test_default_tile_layer_is_cartodb_voyager(self):
-        """CartoDB_Voyager.addTo(map) is executed as the default initial tile layer on startup."""
-        # CartoDB_Voyager must be added to map on startup
-        self.assertIn("CartoDB_Voyager.addTo(map);", self.content)
+    def test_default_tile_layer_is_free_openstreetmap(self):
+        """openStreetMapTileLayer.addTo(map) is executed as the default initial tile layer on startup (100% free, no API key)."""
+        # openStreetMapTileLayer must be added to map on startup
+        self.assertIn("openStreetMapTileLayer.addTo(map);", self.content)
         # stadiaTileLayer must NOT be added to map as default
         self.assertNotIn("stadiaTileLayer.addTo(map);", self.content)
 
-        # Layer switcher baseLayers dictionary must still include all base layers
-        self.assertIn('"Stadia Maps": stadiaTileLayer', self.content)
+        # Layer switcher baseLayers dictionary must still include base layers
         self.assertIn('"OpenStreetMap": openStreetMapTileLayer', self.content)
-        self.assertIn('"CartoDB Voyager": CartoDB_Voyager', self.content)
+        self.assertIn('"Esri World Street Map": Esri_WorldStreetMap', self.content)
 
     def test_auto_nav_route_polyline_styling(self):
         """Auto Navigation route polyline is styled with #6B9E78, rounded join and cap."""
