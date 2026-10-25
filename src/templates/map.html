@@ -1692,13 +1692,14 @@ let currentLayer = null;
 
 
 // Function to set coordinates
-function setCoordinates(lat, lng) {
+function setCoordinates(lat, lng, syncServer = true) {
     if (typeof window !== 'undefined') {
         window.lastDispatchedMoveCoords = { lat: Number(lat), lng: Number(lng) };
     }
     document.getElementById('coordinates').value = lat + ', ' + lng;
     updateSetLocationButtonStatus();
     updateStopLocationButtonStatus(); // Add this line to update the Stop Location button status
+    if (!syncServer) return;
     fetch('/update_location', {
         method: 'POST',
         headers: {
@@ -2688,8 +2689,10 @@ function clearNavRoute() {
 }
 window.clearNavRoute = clearNavRoute;
 
+window.isAutoNavRoutingInFlight = false;
+
 async function handleAutoNavMapClick(e) {
-    if (!window.isAutoNavMode) return;
+    if (!window.isAutoNavMode || window.isAutoNavRoutingInFlight) return;
     if (!e || !e.latlng) return;
 
     const startCoords = getCoordinates();
@@ -2700,55 +2703,66 @@ async function handleAutoNavMapClick(e) {
         return;
     }
 
-    const startLat = startCoords.lat;
-    const startLng = startCoords.lng;
     const destLat = e.latlng.lat;
     const destLng = e.latlng.lng;
 
-    if (!marker && typeof createMarker === 'function') {
-        marker = createMarker([startLat, startLng]);
-    } else if (!marker && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
-        marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
-    }
-
-    if (Math.abs(startLat - destLat) < 0.000001 && Math.abs(startLng - destLng) < 0.000001) {
+    if (Math.abs(startCoords.lat - destLat) < 0.000001 && Math.abs(startCoords.lng - destLng) < 0.000001) {
         return;
     }
 
-    const rawRouteCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
-    const routeCoords = (rawRouteCoords && Array.isArray(rawRouteCoords)) ? rawRouteCoords.slice() : [];
-
-    // Ensure smooth initial start transition:
-    // If OSRM snapped the first waypoint away from user's current exact location,
-    // prepend [startLat, startLng] so there is zero initial teleport jump.
-    if (routeCoords.length >= 2) {
-        const first = routeCoords[0];
-        if (Math.abs(startLat - first[0]) > 0.00002 || Math.abs(startLng - first[1]) > 0.00002) {
-            routeCoords.unshift([startLat, startLng]);
-        } else {
-            routeCoords[0] = [startLat, startLng];
-        }
-        const last = routeCoords[routeCoords.length - 1];
-        if (Math.abs(destLat - last[0]) > 0.00002 || Math.abs(destLng - last[1]) > 0.00002) {
-            routeCoords.push([destLat, destLng]);
-        }
-    }
-
-    clearNavRoute();
-    if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
-        window.navRoutePolyline = L.polyline(routeCoords, {
-            color: '#007bff',
-            weight: 5,
-            opacity: 0.8,
-            lineJoin: 'round'
-        }).addTo(map);
-    }
-
-    // Automatically exit targeting mode upon starting navigation
+    // Immediately exit targeting mode and lock in-flight routing before awaiting network calls
+    window.isAutoNavRoutingInFlight = true;
     toggleAutoNavMode(false, true);
 
-    const speed = getCurrentSpeed();
-    return startNavigation(routeCoords, speed);
+    try {
+        if (window.isNavigating && typeof stopNavigation === 'function') {
+            await stopNavigation();
+        }
+
+        const latestStart = getCoordinates() || startCoords;
+        const startLat = latestStart.lat;
+        const startLng = latestStart.lng;
+
+        if (!marker && typeof createMarker === 'function') {
+            marker = createMarker([startLat, startLng]);
+        } else if (!marker && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+            marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
+        }
+
+        const rawRouteCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
+        const routeCoords = (rawRouteCoords && Array.isArray(rawRouteCoords)) ? rawRouteCoords.slice() : [];
+
+        // Ensure smooth initial start transition:
+        // If OSRM snapped the first waypoint away from user's current exact location,
+        // prepend [startLat, startLng] so there is zero initial teleport jump.
+        if (routeCoords.length >= 2) {
+            const first = routeCoords[0];
+            if (Math.abs(startLat - first[0]) > 0.00002 || Math.abs(startLng - first[1]) > 0.00002) {
+                routeCoords.unshift([startLat, startLng]);
+            } else {
+                routeCoords[0] = [startLat, startLng];
+            }
+            const last = routeCoords[routeCoords.length - 1];
+            if (Math.abs(destLat - last[0]) > 0.00002 || Math.abs(destLng - last[1]) > 0.00002) {
+                routeCoords.push([destLat, destLng]);
+            }
+        }
+
+        clearNavRoute();
+        if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
+            window.navRoutePolyline = L.polyline(routeCoords, {
+                color: '#007bff',
+                weight: 5,
+                opacity: 0.8,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        const speed = getCurrentSpeed();
+        return await startNavigation(routeCoords, speed);
+    } finally {
+        window.isAutoNavRoutingInFlight = false;
+    }
 }
 window.handleAutoNavMapClick = handleAutoNavMapClick;
 
@@ -2887,7 +2901,7 @@ function updatePositionOnStep(lat, lng) {
         updateStopLocationButtonStatus();
     }
     if (typeof setCoordinates === 'function') {
-        setCoordinates(lat, lng);
+        setCoordinates(lat, lng, false);
     }
 }
 

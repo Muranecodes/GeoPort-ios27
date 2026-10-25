@@ -72,13 +72,28 @@ OSUTILS = get_os_utils()
 
 
 import logging
+from logging.handlers import RotatingFileHandler
 
+
+_log_file_path = Path(__file__).resolve().parent.parent / "geoport.log"
+_log_handlers = [logging.StreamHandler()]
+try:
+    _log_handlers.append(
+        RotatingFileHandler(
+            _log_file_path,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    )
+except OSError:
+    pass
 
 # Get or create a logger instance named "GeoPort"
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=_log_handlers,
 )
 
 # Create a logger named "GeoPort"

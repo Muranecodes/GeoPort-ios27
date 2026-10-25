@@ -325,6 +325,73 @@ class TestMapTemplateAutoNavVerification(unittest.TestCase):
         """Ensure handleAutoNavMapClick calls toggleAutoNavMode(false, true)."""
         self.assertIn("toggleAutoNavMode(false, true)", self.content)
 
+    def test_auto_nav_map_click_prevents_double_click_duplicate_start(self):
+        """Rapid double-click on map during OSRM routing only triggers startNavigation once."""
+        js_code = """
+        const fs = require('fs');
+        const content = fs.readFileSync(process.argv[1], 'utf-8');
+
+        global.window = global;
+        global.document = {
+            getElementById: function() {
+                return {
+                    classList: { add: function() {}, remove: function() {} },
+                    style: { cursor: '' },
+                    title: ''
+                };
+            }
+        };
+        global.displayToast = function() {};
+        global.marker = {
+            getLatLng: () => ({ lat: 25.0330, lng: 121.5654 })
+        };
+        global.getCoordinates = () => ({ lat: 25.0330, lng: 121.5654 });
+        global.getCurrentSpeed = () => 9.6;
+        global.clearNavRoute = function() {};
+        global.isNavigating = false;
+
+        let osrmCalls = 0;
+        let startNavCalls = 0;
+        global.fetchOsrmRoute = async function(sLat, sLng, dLat, dLng) {
+            osrmCalls++;
+            await new Promise(r => setTimeout(r, 50));
+            return [[sLat, sLng], [dLat, dLng]];
+        };
+        global.startNavigation = async function(waypoints, speed) {
+            startNavCalls++;
+            return { status: 'started' };
+        };
+
+        eval(content.match(/window\\.isAutoNavMode\\s*=\\s*false;/)[0]);
+        eval(content.match(/function toggleAutoNavMode[\\s\\S]*?\\n\\}/)[0]);
+        eval(content.match(/window\\.isAutoNavRoutingInFlight\\s*=\\s*false;[\\s\\S]*?async function handleAutoNavMapClick[\\s\\S]*?\\n\\}/)[0]);
+
+        (async () => {
+            toggleAutoNavMode(true, true);
+            const clickEvent = { latlng: { lat: 25.0400, lng: 121.5750 } };
+            const p1 = handleAutoNavMapClick(clickEvent);
+            const modeImmediatelyAfterFirstClick = window.isAutoNavMode;
+            const p2 = handleAutoNavMapClick(clickEvent);
+            await Promise.all([p1, p2]);
+            console.log(JSON.stringify({
+                modeImmediatelyAfterFirstClick,
+                osrmCalls,
+                startNavCalls
+            }));
+        })();
+        """
+        template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
+        result = subprocess.run(
+            ["node", "-e", js_code, str(template_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        data = json.loads(result.stdout)
+        self.assertFalse(data["modeImmediatelyAfterFirstClick"])
+        self.assertEqual(data["osrmCalls"], 1)
+        self.assertEqual(data["startNavCalls"], 1)
+
     def test_auto_nav_button_elements_present(self):
         """Template contains Auto Navigation EasyButton and icon."""
         self.assertIn("autoNavButton", self.content)

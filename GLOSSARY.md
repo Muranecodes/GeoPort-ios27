@@ -1,6 +1,6 @@
-# GeoPort Domain Model
+# GeoPort (花徑漫步) Domain Model
 
-GeoPort is an iOS location simulation and spoofing workbench supporting developer tunnel protocols, automated pedestrian navigation, and manual real-time steering.
+**花徑漫步** (codebase/internal name: `GeoPort`) is an iOS location simulation and spoofing workbench supporting developer tunnel protocols, automated pedestrian navigation, and manual real-time steering.
 
 ## Language
 
@@ -27,6 +27,10 @@ _Avoid_: Joystick mode, key walking
 **Planting Speed**:
 A specialized movement preset capped at 19.1 km/h tailored for location-based games to maximize active flower planting while staying under speed lock thresholds.
 _Avoid_: Bike preset, cycling speed, 20kmh
+
+**Camera Tracking**:
+Automatic viewport panning that keeps the simulated location marker centered on the map during Auto Navigation or Manual Steering, disengaging automatically when the user manually drags the map.
+_Avoid_: Map lock, auto-pan, follow mode
 
 **Fuel Mode**:
 A deprecated legacy subsystem that scraped Australian fuel prices and positioned simulated GPS coordinates at gas stations. Slated for complete removal.

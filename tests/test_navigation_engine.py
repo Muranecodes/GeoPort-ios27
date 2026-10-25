@@ -563,6 +563,80 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         finally:
             pacing_controller.stop()
 
+    def test_step_tick_rejects_stale_worker_generation_and_burst_ticks(self):
+        """Stale worker generations and rapid worker ticks (< min_step_interval) are dropped."""
+        clock = FakeClock(1000.0)
+        ctrl = NavigationController(
+            sink=self.mock_sink,
+            clock=clock,
+            tick_interval=1.0,
+            min_step_interval=0.95,
+        )
+        p1 = (25.0330, 121.5654)
+        p2 = (25.0400, 121.5654)
+        try:
+            ctrl.start([p1, p2], speed_kmh=10.0)
+            gen1 = ctrl._worker_generation
+            self.assertEqual(self.mock_sink.call_count, 1)
+
+            # A second start() within 0.05s (< 0.95s) increments generation and skips duplicate burst initial dispatch
+            clock.advance(0.05)
+            ctrl.start([p1, p2], speed_kmh=10.0)
+            gen2 = ctrl._worker_generation
+            self.assertGreater(gen2, gen1)
+            self.assertEqual(self.mock_sink.call_count, 1)
+
+            # Stale worker from gen1 attempting to tick is rejected immediately
+            clock.advance(1.0)
+            stale_active = ctrl.step_tick(dt=1.0, expected_generation=gen1)
+            self.assertFalse(stale_active)
+            self.assertEqual(self.mock_sink.call_count, 1)
+
+            # Active worker from gen2 succeeds after >= 0.95s elapsed
+            valid_active = ctrl.step_tick(dt=1.0, expected_generation=gen2)
+            self.assertTrue(valid_active)
+            self.assertEqual(self.mock_sink.call_count, 2)
+
+            # Second tick 0.066s later (< 0.95s) from worker is dropped by anti-burst guard
+            clock.advance(0.066)
+            dist_before = ctrl.traveled_distance_m
+            burst_active = ctrl.step_tick(dt=1.0, expected_generation=gen2)
+            self.assertTrue(burst_active)
+            self.assertEqual(ctrl.traveled_distance_m, dist_before)
+            self.assertEqual(self.mock_sink.call_count, 2)
+        finally:
+            ctrl.stop()
+
+    def test_concurrent_start_calls_during_slow_dispatch_spawn_only_single_worker(self):
+        """Concurrent start() calls overlapping during slow DVT dispatch never create duplicate active workers."""
+        import threading
+
+        class SlowSink(MockLocationSink):
+            def set_location(self, latitude: float, longitude: float) -> None:
+                time.sleep(0.05)
+                super().set_location(latitude, longitude)
+
+        slow_sink = SlowSink()
+        ctrl = NavigationController(sink=slow_sink, tick_interval=0.2, min_step_interval=0.15)
+        p1 = (25.0330, 121.5654)
+        p2 = (25.0400, 121.5654)
+        try:
+            t1 = threading.Thread(target=ctrl.start, args=([p1, p2], 9.6))
+            t2 = threading.Thread(target=ctrl.start, args=([p1, p2], 9.6))
+            t1.start()
+            time.sleep(0.01)
+            t2.start()
+            t1.join()
+            t2.join()
+
+            nav_workers = [
+                t for t in threading.enumerate()
+                if t.name.startswith("GeoPortNavigationWorker") and t.is_alive()
+            ]
+            self.assertEqual(len(nav_workers), 1)
+        finally:
+            ctrl.stop()
+
 
 
 class TestNavigationFlaskEndpoints(unittest.TestCase):
