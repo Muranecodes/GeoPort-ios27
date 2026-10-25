@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Remove the unused secondary map template from the repository and eliminate the duplicate Bootstrap 4 CSS import so styling is governed cleanly by Bootstrap 5 and custom botanical CSS variables.
-- [ ] Define CSS custom properties for Light Mode (Warm Cream `#FAF8F5`, pure cream cards, Sage Green `#6B9E78`, Blossom Pink `#E8829C`, rounded sans-serif typography, `20px–24px` card corners, and `999px` pill buttons) and Dark Mode (`body.dark-mode` with Cozy Forest Night `#1E2522` background and `#28312C` card surfaces).
-- [ ] Restructure the page into a single-viewport Three-Tier Compact Bento Card layout:
+- [x] Remove the unused secondary map template from the repository and eliminate the duplicate Bootstrap 4 CSS import so styling is governed cleanly by Bootstrap 5 and custom botanical CSS variables.
+- [x] Define CSS custom properties for Light Mode (Warm Cream `#FAF8F5`, pure cream cards, Sage Green `#6B9E78`, Blossom Pink `#E8829C`, rounded sans-serif typography, `20px–24px` card corners, and `999px` pill buttons) and Dark Mode (`body.dark-mode` with Cozy Forest Night `#1E2522` background and `#28312C` card surfaces).
+- [x] Restructure the page into a single-viewport Three-Tier Compact Bento Card layout:
   - Top Bento Card (single horizontal row): Brand title `🌸 花徑漫步`, inline device selector (`📱 選擇裝置`), refresh button (`🔄 重新整理`), connect/disconnect buttons (`🔗 連線裝置` / `🔌 中斷連線`), dark mode switch (`🌙 深色模式`), and exit button (`🚪 離開`).
   - Center Map Canvas Card: Rounded map container (`24px` border radius) that flexes to fill remaining viewport height without vertical page scrolling.
   - Bottom Bento Card (single horizontal row): Coordinate/place search input (`🔍 輸入座標或地名…`), search button (`搜尋`), and **Location Simulation** pill buttons (`📍 開始定位` and `🛑 停止定位`).
-- [ ] Localize all user-facing messages, right-click starting-point popup (`📌 設為預設起點`), toast headers (`🌸 花徑漫步`), connection states (`連線中，請稍候…` / `✅ 已連線`), and system modals (Developer Mode, passcode prompt, pair record prompt, connection timeout, server shutdown) into friendly Traditional Chinese.
-- [ ] Add automated tests verifying the rendered `🌸 花徑漫步` brand identity, Three-Tier Bento structure, Traditional Chinese UI copy, dark mode theme variables, preservation of all existing DOM IDs, and removal of the obsolete secondary template.
+- [x] Localize all user-facing messages, right-click starting-point popup (`📌 設為預設起點`), toast headers (`🌸 花徑漫步`), connection states (`連線中，請稍候…` / `✅ 已連線`), and system modals (Developer Mode, passcode prompt, pair record prompt, connection timeout, server shutdown) into friendly Traditional Chinese.
+- [x] Add automated tests verifying the rendered `🌸 花徑漫步` brand identity, Three-Tier Bento structure, Traditional Chinese UI copy, dark mode theme variables, preservation of all existing DOM IDs, and removal of the obsolete secondary template.

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/html">
 
 <head>
-    <title>GeoPort</title>
+    <title>🌸 花徑漫步</title>
 
     <script src="https://cdn.jsdelivr.net/npm/babel-polyfill@latest/dist/polyfill.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js"></script>
@@ -20,7 +20,9 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2.4.0/src/easy-button.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.css" />
@@ -73,107 +75,374 @@
     border: 0
 }
 
-        #map {
-            width: 100%;
-            height: 500px;
-            max-height: 70vh;
-        }
-
-        /* Smooth moving marker animation between 1-second ticks */
-        .leaflet-marker-icon,
-        .leaflet-marker-shadow {
-            transition: transform 0.95s linear;
-        }
-        .leaflet-drag-target,
-        .leaflet-zoom-anim .leaflet-marker-icon,
-        .leaflet-zoom-anim .leaflet-marker-shadow {
-            transition: none !important;
-        }
-
-        .coordinates-container {
-            margin-top: 10px;
-        }
-
-        /* Dark mode styles */
-        body.dark-mode {
-            background-color: #222; /* Darker background color for main page */
-            color: #fff;
-        }
-
-
-        body.dark-mode div[class="p-3 px-md-4 mb-3 bg-white border-bottom box-shadow"],
-        body.dark-mode select[class="custom-select"],
-        body.dark-mode select[class="custom-select d-block w-100"],
-        body.dark-mode input[type="option"],
-        body.dark-mode input[class="form-control"],
-        body.dark-mode #border,
-        body.dark-mode .collapse textarea,
-        body.dark-mode textarea {
-            background-color: #333; /* Dark background color for text inputs in dark mode */
-            color: #fff; /* Light text color for text inputs in dark mode */
-            border-color: #666; /* Dark border color for text inputs in dark mode */
-        }
-
-body.dark-mode #border.dark-mode-bg {
-        background-color: #222; /* Darker background color for main page in dark mode */
-        border-color: #666; /* Dark border color for the container in dark mode */
-    }
-
-    body.dark-mode #border.dark-mode-bg .box-shadow {
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); /* Dark shadow for the container in dark mode */
-    }
-
-    /* Dark mode toast styles */
-body.dark-mode .toast {
-    background-color: #333; /* Dark background color for toast */
-    color: #fff; /* Light text color for toast in dark mode */
+:root {
+    --bg-base: #FAF8F5;
+    --card-bg: rgba(255, 255, 255, 0.92);
+    --card-border: #E6E2D8;
+    --card-shadow: 0 8px 24px rgba(92, 107, 97, 0.08);
+    --accent-primary: #6B9E78;
+    --accent-primary-hover: #5A8B66;
+    --accent-primary-tint: #EAF3EC;
+    --accent-blossom: #E8829C;
+    --accent-blossom-fill: #FCEEF2;
+    --accent-blossom-border: #F4B8C8;
+    --accent-danger: #E07A7A;
+    --text-primary: #2F3A34;
+    --text-secondary: #6E7B73;
+    --input-bg: #FFFFFF;
 }
 
-body.dark-mode .toast-header {
-    background-color: #555; /* Dark background color for toast header */
-    color: #fff; /* Light text color for toast header in dark mode */
+body.dark-mode {
+    --bg-base: #1E2522;
+    --card-bg: #28312C;
+    --card-border: #38453E;
+    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --accent-primary: #7FB38D;
+    --accent-primary-hover: #6EA07C;
+    --accent-primary-tint: #2B3A31;
+    --accent-blossom: #F299B1;
+    --accent-blossom-fill: #3E2F35;
+    --accent-blossom-border: #6B434F;
+    --accent-danger: #E28585;
+    --text-primary: #ECF2EE;
+    --text-secondary: #A3B1A8;
+    --input-bg: #343E38;
 }
 
-body.dark-mode .toast-header .close {
-    color: #fff; /* Light close icon color for toast in dark mode */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: "Nunito", "M PLUS Rounded 1c", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-body.dark-mode .toast-body {
-    background-color: #333; /* Dark background color for toast body */
-    color: #fff; /* Light text color for toast body in dark mode */
+.bento-container {
+    height: 100vh;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    gap: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
-/* Dark mode modal styles */
+
+.bento-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(8px);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.bento-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px;
+    flex-shrink: 0;
+}
+
+.brand-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.brand-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.device-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+}
+
+.utility-cluster {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.bento-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.bento-map-card {
+    flex: 1;
+    min-height: 380px;
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    border-radius: 24px;
+}
+
+.bento-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 18px;
+    flex-shrink: 0;
+}
+
+.search-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.simulation-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Smooth moving marker animation between 1-second ticks */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+    transition: transform 0.95s linear;
+}
+.leaflet-drag-target,
+.leaflet-zoom-anim .leaflet-marker-icon,
+.leaflet-zoom-anim .leaflet-marker-shadow {
+    transition: none !important;
+}
+
+.coordinates-container {
+    margin-top: 10px;
+}
+
+/* Button & Control styling */
+.btn-bento-primary {
+    background-color: var(--accent-primary);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-bento-primary:hover, .btn-bento-primary:focus {
+    background-color: var(--accent-primary-hover);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+.btn-bento-primary:active {
+    transform: translateY(1px);
+}
+
+.btn-bento-danger {
+    background-color: var(--accent-danger);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-bento-danger:hover {
+    background-color: #C86666;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+.btn-bento-danger:active {
+    transform: translateY(1px);
+}
+
+.btn-bento-outline {
+    border: 1.5px solid var(--accent-primary);
+    color: var(--accent-primary) !important;
+    background: transparent;
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-bento-outline:hover {
+    background-color: var(--accent-primary);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.btn-bento-pill-success {
+    background-color: var(--accent-primary);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-bento-pill-success:hover:not(:disabled) {
+    background-color: var(--accent-primary-hover);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+.btn-bento-pill-success:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-bento-pill-danger {
+    background-color: var(--accent-danger);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-bento-pill-danger:hover:not(:disabled) {
+    background-color: #C86666;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+.btn-bento-pill-danger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.bento-input, .bento-select {
+    border-radius: 999px !important;
+    background-color: var(--input-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 6px 14px;
+    font-size: 13px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.bento-input:focus, .bento-select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-primary-tint);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+}
+
+/* Modals & Toasts styling */
+.modal-content {
+    border-radius: 20px;
+    border: 1px solid var(--card-border);
+    background-color: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+}
+.modal-header {
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom: 1px solid var(--card-border);
+    background-color: var(--accent-primary-tint);
+}
+.modal-footer {
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top: 1px solid var(--card-border);
+}
 body.dark-mode .modal-content {
-    background-color: #333; /* Dark background color for modal content */
-    color: #fff; /* Light text color for modal content in dark mode */
+    background-color: #28312C;
+    color: #ECF2EE;
+    border-color: #38453E;
 }
-
 body.dark-mode .modal-header {
-    background-color: #555; /* Dark background color for modal header */
-    color: #fff; /* Light text color for modal header in dark mode */
-    border-bottom: 1px solid #666; /* Dark border color for modal header in dark mode */
+    background-color: #232D27;
+    color: #ECF2EE;
+    border-bottom-color: #38453E;
 }
-
-body.dark-mode .modal-body {
-    background-color: #333; /* Dark background color for modal body */
-    color: #fff; /* Light text color for modal body in dark mode */
-}
-
+body.dark-mode .modal-body,
 body.dark-mode .modal-footer {
-    background-color: #333; /* Dark background color for modal footer */
-    color: #fff; /* Light text color for modal footer in dark mode */
-    border-top: 1px solid #666; /* Dark border color for modal footer in dark mode */
+    background-color: #28312C;
+    color: #ECF2EE;
+    border-top-color: #38453E;
 }
 
-body.dark-mode .modal-header .close {
-    color: #fff; /* Light close icon color for modal in dark mode */
+.toast {
+    border-radius: 16px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+}
+.toast-header {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    background-color: var(--accent-primary-tint);
+    color: var(--accent-primary);
+    border-bottom: 1px solid var(--card-border);
+    font-weight: 700;
+}
+body.dark-mode .toast {
+    background-color: #28312C;
+    color: #ECF2EE;
+    border-color: #38453E;
+}
+body.dark-mode .toast-header {
+    background-color: #232D27;
+    color: #7FB38D;
+    border-bottom-color: #38453E;
+}
+body.dark-mode .toast-body {
+    background-color: #28312C;
+    color: #ECF2EE;
 }
 
-body.dark-mode .modal-footer button {
-    color: #fff; /* Light button text color for modal footer in dark mode */
-    background-color: #555; /* Dark button background color for modal footer in dark mode */
-    border-color: #555; /* Dark border color for buttons in modal footer in dark mode */
+body.dark-mode select.bento-select,
+body.dark-mode input.bento-input {
+    background-color: #343E38;
+    color: #ECF2EE;
+    border-color: #43524A;
 }
+body.dark-mode select.bento-select option {
+    background-color: #28312C;
+    color: #ECF2EE;
+}
+
 .marker-menu {
     display: flex;
     flex-direction: column;
@@ -481,131 +750,112 @@ body.dark-mode .hud-stat-value {
 </head>
 
 <body>
-{% if timeout_message %}
-        <div class="alert alert-warning" role="alert">
+<div class="bento-container">
+    {% if timeout_message %}
+        <div class="alert alert-warning py-1 px-3 mb-1" role="alert">
             {{ timeout_message }}
         </div>
     {% endif %}
     {% if error_message %}
-        <div class="alert alert-danger" role="alert">
+        <div class="alert alert-danger py-1 px-3 mb-1" role="alert">
             {{ error_message }}
         </div>
     {% endif %}
-<p><br></p>
 
-<div class="d-flex flex-column align-items-center flex-md-row container">
-    <h4 class="my-0 mx-auto font-weight-normal">GeoPort - Your location, Anywhere!</h4>
-    <a id="exit-btn" class="btn btn-outline-primary pl-4 pr-4 ml-4" href="#" title="GeoPort" onclick="exitApp()">Exit</a>
-</div>
+    <!-- Tier 1: Top Bento Bar -->
+    <header class="bento-card bento-top-bar">
+        <div class="brand-cluster">
+            <span class="brand-title">🌸 花徑漫步</span>
+        </div>
 
+        <div class="device-cluster">
+            <label for="device" class="bento-label">📱 選擇裝置</label>
+            <select class="form-select custom-select bento-select form-select-sm" id="device" required></select>
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="refresh" onclick="populateDeviceList()">🔄 重新整理</button>
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="connect" onclick="connectDevice()">
+                <span id="connectText">🔗 連線裝置</span>
+                <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+            </button>
+            <button type="button" class="btn btn-sm btn-bento-danger text-nowrap" id="disconnect" onclick="disconnectDevice()" style="display: none;">🔌 中斷連線</button>
+            <input class="form-control" type="text" id="rsdData" placeholder="RSD Data…" readonly style="display: none;">
+        </div>
 
-
-<!-- Dark Mode switch -->
-<div class="d-flex justify-content-md-end mt-3 container">
-    <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
-        <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
-    </div>
-</div>
-
-
-
-<div class="container">
-<!--    <div class="p-3 px-md-4 mb-3 bg-white border-bottom box-shadow dark-mode-bg"  id="border">-->
-    <div class="p-3 px-md-4 mb-3 border-bottom box-shadow dark-mode-bg"  id="border">
-
-</div>
-
-
-	<!-- Connect Device -->
-{% if error_messages %}
-    <button type="button" class="btn btn-primary pl-4 pr-4" id="connect" onclick="connectDevice()" disabled>
-        <span id="connectText">Connect Device</span>
-    </button>
-{% else %}
-    <br>
-      <form>
-    <div class="mb-3">
-        <label for="device">Select Device:</label><br>
-        <div class="row">
-            <div class="col">
-                <select class="custom-select d-block w-100" id="device" required>
-                </select>
+        <div class="utility-cluster">
+            <div class="form-check form-switch d-flex align-items-center mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
+                <label class="form-check-label bento-label ms-2 mb-0" for="darkModeSwitch">🌙 深色模式</label>
             </div>
-            <div class="col-md-auto">
-                <button type="button" class="btn btn-primary pl-4 pr-4" id="refresh" onclick="populateDeviceList()">Refresh</button>
+            <a id="exit-btn" class="btn btn-sm btn-bento-outline text-nowrap" href="#" title="🌸 花徑漫步" onclick="exitApp()">🚪 離開</a>
+        </div>
+    </header>
+
+    <!-- Tier 2: Center Map Canvas Card -->
+    <main class="bento-card bento-map-card">
+        <!-- Speed Control Toolbar Widget -->
+        <div id="speedControlWidget" class="speed-control-widget mb-2">
+            <div class="speed-control-header">
+                <span><i class="fa-solid fa-gauge-high mr-1"></i> Speed Control</span>
+                <span id="speedDisplayBadge" class="badge badge-primary">5 km/h</span>
+            </div>
+            <div class="speed-presets-group" role="group" aria-label="Speed Presets">
+                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">🚶 散步 · Walk (5 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)">🌸 種花 (19.1 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">🚗 開車 · Drive (60 km/h)</button>
+            </div>
+            <div class="speed-inputs-row">
+                <div class="speed-slider-wrap">
+                    <input type="range" class="form-range" id="speedRangeSlider" min="1" max="100" step="1" value="5" title="Speed Range Slider">
+                </div>
+                <div class="speed-number-wrap">
+                    <input type="number" class="form-control form-control-sm" id="speedNumberInput" min="0.1" max="200" step="0.5" value="5" title="Speed in km/h">
+                    <span class="speed-unit">km/h</span>
+                </div>
             </div>
         </div>
-    </div>
-</form>
 
+        <!-- Navigation HUD Floating Panel -->
+        <div id="navigationHud" class="navigation-hud card mb-2" style="display: none;">
+            <div class="card-body p-2">
+                <div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
+                    <span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
+                    <span id="navStatusBadge" class="badge badge-success">運行中</span>
+                </div>
+                <div class="hud-stats-row mb-2">
+                    <div class="hud-stat-item">
+                        <span class="hud-stat-label">速度</span>
+                        <span id="navHudSpeed" class="hud-stat-value">5.0 km/h</span>
+                    </div>
+                    <div class="hud-stat-item">
+                        <span class="hud-stat-label">剩餘距離</span>
+                        <span id="navHudDistance" class="hud-stat-value">0 m</span>
+                    </div>
+                    <div class="hud-stat-item">
+                        <span class="hud-stat-label">預計抵達</span>
+                        <span id="navHudEta" class="hud-stat-value">0s</span>
+                    </div>
+                </div>
+                <div class="hud-actions d-flex gap-2">
+                    <button type="button" id="navPauseResumeBtn" class="btn btn-sm btn-outline-warning flex-fill" onclick="toggleNavPause()">暫停</button>
+                    <button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" onclick="stopNavigation()">停止導航</button>
+                </div>
+            </div>
+        </div>
 
+        <div id="map"></div>
+    </main>
 
-<button type="button" class="btn btn-primary pl-4 pr-4" id="connect" onclick="connectDevice()">
-    <span id="connectText">Connect Device</span>
-    <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-</button>
-
-<button type="button" class="btn btn-danger pl-4 pr-4" id="disconnect" onclick="disconnectDevice()" style="display: none;">
-    Disconnect
-</button>
-
-
-    <!-- Add this input element with ID "rsdData" -->
-<input class="form-control" type="text" id="rsdData" placeholder="RSD Data…" readonly style="display: none;">  <!-- Initially hidden -->
-
-{% endif %}
-	<!-- Speed Control Toolbar Widget -->
-	<div id="speedControlWidget" class="speed-control-widget mb-2">
-		<div class="speed-control-header">
-			<span><i class="fa-solid fa-gauge-high mr-1"></i> Speed Control</span>
-			<span id="speedDisplayBadge" class="badge badge-primary">5 km/h</span>
-		</div>
-		<div class="speed-presets-group" role="group" aria-label="Speed Presets">
-			<button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">Walk (5 km/h)</button>
-			<button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)">🌸 種花 (19.1 km/h)</button>
-			<button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">Drive (60 km/h)</button>
-		</div>
-		<div class="speed-inputs-row">
-			<div class="speed-slider-wrap">
-				<input type="range" class="form-range" id="speedRangeSlider" min="1" max="100" step="1" value="5" title="Speed Range Slider">
-			</div>
-			<div class="speed-number-wrap">
-				<input type="number" class="form-control form-control-sm" id="speedNumberInput" min="0.1" max="200" step="0.5" value="5" title="Speed in km/h">
-				<span class="speed-unit">km/h</span>
-			</div>
-		</div>
-	</div>
-
-	<!-- Navigation HUD Floating Panel -->
-	<div id="navigationHud" class="navigation-hud card mb-2" style="display: none;">
-		<div class="card-body p-2">
-			<div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
-				<span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
-				<span id="navStatusBadge" class="badge badge-success">運行中</span>
-			</div>
-			<div class="hud-stats-row mb-2">
-				<div class="hud-stat-item">
-					<span class="hud-stat-label">速度</span>
-					<span id="navHudSpeed" class="hud-stat-value">5.0 km/h</span>
-				</div>
-				<div class="hud-stat-item">
-					<span class="hud-stat-label">剩餘距離</span>
-					<span id="navHudDistance" class="hud-stat-value">0 m</span>
-				</div>
-				<div class="hud-stat-item">
-					<span class="hud-stat-label">預計抵達</span>
-					<span id="navHudEta" class="hud-stat-value">0s</span>
-				</div>
-			</div>
-			<div class="hud-actions d-flex gap-2">
-				<button type="button" id="navPauseResumeBtn" class="btn btn-sm btn-outline-warning flex-fill" onclick="toggleNavPause()">暫停</button>
-				<button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" onclick="stopNavigation()">停止導航</button>
-			</div>
-		</div>
-	</div>
-
-	<div id="map"></div>
+    <!-- Tier 3: Bottom Bento Bar -->
+    <footer class="bento-card bento-bottom-bar">
+        <div class="search-cluster">
+            <input type="text" class="form-control form-control-sm bento-input" id="coordinates" placeholder="🔍 輸入座標或地名…">
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="search" onclick="handleSearch()">搜尋</button>
+        </div>
+        <div class="simulation-cluster">
+            <button type="button" class="btn btn-sm btn-bento-pill-success text-nowrap" data-toggle="popover" id="set-location" disabled onclick="setLocation()">📍 開始定位</button>
+            <button type="button" class="btn btn-sm btn-bento-pill-danger text-nowrap" data-toggle="popover" id="stop-location" disabled onclick="stopLocation()">🛑 停止定位</button>
+        </div>
+    </footer>
+</div>
 
 <script>
 //=========================== leaflet menu ====================
@@ -763,7 +1013,7 @@ L.leafletMenu = function(a, b) {
 
 
     if (connectTextElement && rsdDataElement) {
-        rsdDataElement.style.display = connectTextElement.innerText === "Connected" ? 'block' : 'none';
+        rsdDataElement.style.display = (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected") ? 'block' : 'none';
     }
 
 
@@ -1804,8 +2054,8 @@ function handleMapContextMenu(event) {
 
     const content = `
         <div class="text-center p-1" style="min-width: 150px;">
-            <button type="button" class="btn btn-sm btn-primary w-100" onclick="saveStartingPoint(${lat}, ${lng}, ${zoom})">
-                <i class="lni lni-map-marker"></i> Set as starting point
+            <button type="button" class="btn btn-sm btn-bento-primary w-100" onclick="saveStartingPoint(${lat}, ${lng}, ${zoom})">
+                📌 設為預設起點
             </button>
         </div>
     `;
@@ -1823,7 +2073,7 @@ function saveStartingPoint(lat, lng, zoom) {
     map.closePopup();
 
     if (typeof displayToast === 'function') {
-        displayToast("Starting point saved");
+        displayToast("已儲存預設起點");
     }
 }
 
@@ -3148,9 +3398,9 @@ function connectDevice() {
     var deviceDropdown = document.getElementById('device');
     if (!deviceDropdown || !deviceDropdown.value) {
         if (typeof displayToast === 'function') {
-            displayToast("Please select a device first.");
+            displayToast("請先選擇裝置。");
         } else if (typeof alert === 'function') {
-            alert("Please select a device first.");
+            alert("請先選擇裝置。");
         }
         return;
     }
@@ -3193,10 +3443,10 @@ function connectDevice() {
 
 
     if (connectTextElement) {
-        connectTextElement.innerText = "Connecting, please wait...";
+        connectTextElement.innerText = "連線中，請稍候…";
     }
     // Hide the connectText and show the spinner only if not already connected
-    if (connectTextElement && spinnerElement && connectTextElement.innerText !== "Connected") {
+    if (connectTextElement && spinnerElement && connectTextElement.innerText !== "✅ 已連線" && connectTextElement.innerText !== "Connected") {
         connectTextElement.style.display = 'inline-block'; // Display the text
         spinnerElement.style.display = 'inline-block'; // Display the spinner
     }
@@ -3242,7 +3492,7 @@ function connectDevice() {
 
             // Reset connectTextElement
             if (connectTextElement) {
-                connectTextElement.innerText = "Connect Device";
+                connectTextElement.innerText = "🔗 連線裝置";
                 spinnerElement.style.display = 'none'; // Display the spinner
             }
 
@@ -3262,14 +3512,14 @@ function connectDevice() {
         }
 
         if (connectTextElement) {
-            connectTextElement.innerText = "Connected";
+            connectTextElement.innerText = "✅ 已連線";
         }
 
         if (connectButton) {
             connectButton.disabled = true;  // Disable the button
         }
 
-        if (spinnerElement && connectTextElement.innerText === "Connected") {
+        if (spinnerElement && (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected")) {
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
@@ -3289,7 +3539,7 @@ function connectDevice() {
                     if ('rsd_data' in data) {
                         rsdDataElement.value = data.rsd_data;
 
-                        if (connectTextElement && connectTextElement.innerText === "Connected") {
+                        if (connectTextElement && (connectTextElement.innerText === "✅ 已連線" || connectTextElement.innerText === "Connected")) {
                             //rsdDataElement.style.display = 'block';  // Make rsdData visible
                             updateSetLocationButtonStatus();
                             updateStopLocationButtonStatus();  // Add this line to update the Stop Location button status
@@ -3298,7 +3548,7 @@ function connectDevice() {
                             var disconnectButton = document.getElementById('disconnect');
                             if (disconnectButton) {
                                 disconnectButton.style.display = 'inline-block';
-                                disconnectButton.innerText = 'Disconnect';
+                                disconnectButton.innerText = '🔌 中斷連線';
                             }
                         }
                     } else {
@@ -3320,7 +3570,7 @@ function connectDevice() {
             }
 
             if (connectTextElement) {
-                connectTextElement.innerText = "Error connecting";
+                connectTextElement.innerText = "連線失敗";
             }
 
             if (connectButton) {
@@ -3369,7 +3619,7 @@ function showModalWifiModeRequired() {
 
         // Update Disconnect button text and show Connect button
         if (disconnectButton) {
-            disconnectButton.innerText = "Disconnecting, Please wait...";
+            disconnectButton.innerText = "🔌 中斷連線";
             disconnectButton.style.display = 'none';
         }
 
@@ -3381,7 +3631,7 @@ function showModalWifiModeRequired() {
 
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "Connect Device";
+            connectTextElement.innerText = "🔗 連線裝置";
         }
 
         // Enable Connect button
@@ -3549,11 +3799,9 @@ function setLocationArrows() {
       // Set up the toast content
       toast.innerHTML = `
         <div class="toast-header">
-          <strong class="mr-auto">GeoPort</strong>
-          <small>Just Now</small>
-          <button type="button" class="ml-2 mb-1 close" data-bs-dismiss="toast" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+          <strong class="me-auto">🌸 花徑漫步</strong>
+          <small>剛剛</small>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body">
         </div>
@@ -3580,8 +3828,8 @@ function continueAfterDeveloperModeRequired() {
     console.log('Enabling Developer Mode on: ', selectedDeviceIdentifier);
 
     if (connectTextElement) {
-        connectTextElement.innerText = "Enabling Developer Mode";
-        spinnerElement.style.display = 'inline-block'; // Hide the spinner
+        connectTextElement.innerText = "正在啟用開發者模式…";
+        spinnerElement.style.display = 'inline-block'; // Show the spinner
     }
 
     // Make an AJAX request to enable developer mode
@@ -3610,7 +3858,7 @@ function continueAfterDeveloperModeRequired() {
         console.error('Error enabling developer mode:', error);
         // Handle the error, e.g., display an alert or take appropriate action
         //alert('Error enabling developer mode.');
-        showAlertOrModal('Error enabling developer mode.');
+        showAlertOrModal('啟用開發者模式時發生錯誤。');
     });
 }
 
@@ -3626,7 +3874,7 @@ function continueAfterDeveloperModeRequired() {
         // Perform any actions needed to cancel after developer mode is required
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "Connect Device";
+            connectTextElement.innerText = "🔗 連線裝置";
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
@@ -3648,7 +3896,7 @@ function continueAfterDeveloperModeRequired() {
         // Perform any actions needed to cancel after developer mode is required
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "Connect Device";
+            connectTextElement.innerText = "🔗 連線裝置";
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
@@ -3702,175 +3950,117 @@ function continueAfterDeveloperModeRequired() {
 });
 </script>
 
-<p></p>
-
-<div class="mb-3">
-    <div class="row align-items-center">
-        <div class="col-md-auto">
-            <label class="mb-0" for="coordinates">Location:</label>
-        </div>
-        <div class="col">
-            <input type="text" class="form-control" id="coordinates">
-        </div>
-        <div class="col-md-auto">
-            <button type="button" class="btn btn-primary" id="search" onclick="handleSearch()">Search</button>
-        </div>
-    </div>
-</div>
-
-<div class="mb-3">
-    <div class="row align-items-center">
-        <div class="col">
-            <button type="button" class="btn btn-primary w-100" data-toggle="popover" id="set-location" disabled onclick="setLocation()">Simulate Location</button>
-        </div>
-        <div class="col">
-            <button type="button" class="btn btn-primary w-100" data-toggle="popover" id="stop-location" disabled onclick="stopLocation()">Stop Location</button>
-        </div>
-    </div>
-
-</div>
-
-
-
-    </div>
-</div>
-
-
-
-
-
 <div class="modal fade" id="shutdownModal" tabindex="-1" role="dialog" aria-labelledby="shutdownModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="shutdownModalLabel">Server Shutdown</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="shutdownModalLabel">伺服器已關閉</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                Thank you for using the app!
+            <div class="modal-body text-center py-4">
+                感謝您的使用，祝您散步愉快！🌸
             </div>
         </div>
     </div>
 </div>
-
 
 <div class="modal fade" id="developerModeModal" tabindex="-1" role="dialog" aria-labelledby="devModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="developerModeModal">Developer Mode</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="devModalLabel">需要開發者模式</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>The device is enabled with a passcode </p>
-                Developer Mode is required and cannot be enabled
-                <p>Please temporarily disable your passcode and</p>
-                try to connect again
-                <p>Enabling Developer Mode is only required one-time.</p>
+                <p>裝置已設定螢幕鎖定密碼。</p>
+                <p>啟用「開發者模式」時無法處於設有密碼狀態，請先暫時關閉裝置密碼後再嘗試連線。</p>
+                <p class="text-muted mb-0"><small>註：開啟開發者模式通常只需設定一次。</small></p>
             </div>
             <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-secondary mx-auto" data-bs-dismiss="modal" onclick="window.location.href = '/'">OK</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">好</button>
             </div>
         </div>
     </div>
 </div>
+
 <div class="modal fade" id="pairRecordModal" tabindex="-1" role="dialog" aria-labelledby="pairRecordModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="pairRecordModalLabel">No Pair Record</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Pair Record Not Found</p>
-                Please use a USB Cable to create a Pair Record
-
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href = '/'">OK</button>
-
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="developerModeRequiredModal" tabindex="-1" role="dialog" aria-labelledby="developerModeRequiredModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="developerModeRequiredModalLabel">Developer Mode Required</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Developer mode is not enabled</p>
-                GeoPort will now attempt to enable Developer Mode
-                <p>Your device will reboot</p>
-                OK to proceed<br>
-                Cancel to return home
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="continueAfterDeveloperModeRequired()">OK</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="cancelAfterDeveloperModeRequired()">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="modalTimeout" tabindex="-1" role="dialog" aria-labelledby="modalTimeout" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTimeout">Connect Timeout</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="pairRecordModalLabel">無配對紀錄</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <p>Unable to create device tunnel within 60 seconds</p>
-
-                <p>Please try to connect again</p>
-
+                <p>找不到此裝置的配對信任紀錄。</p>
+                <p class="mb-0">請先使用 USB 傳輸線連接電腦與裝置以建立配對信任。</p>
             </div>
-            <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href = '/'">Close</button>
-
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">好</button>
             </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="developerError" tabindex="-1" role="dialog" aria-labelledby="developerErrorLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+
+<div class="modal fade" id="developerModeRequiredModal" tabindex="-1" role="dialog" aria-labelledby="developerModeRequiredModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="developerErrorLabel">Developer Error</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title" id="developerModeRequiredModalLabel">需要啟用開發者模式</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>裝置尚未啟用開發者模式。</p>
+                <p>「🌸 花徑漫步」將嘗試為您的裝置啟用開發者模式，過程中裝置將會自動重新開機。</p>
+                <p class="mb-0">點擊「確定」繼續，或點擊「取消」返回。</p>
+            </div>
+            <div class="modal-footer justify-content-center gap-2">
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="continueAfterDeveloperModeRequired()">確定</button>
+                <button type="button" class="btn btn-bento-outline px-4" data-bs-dismiss="modal" onclick="cancelAfterDeveloperModeRequired()">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTimeout" tabindex="-1" role="dialog" aria-labelledby="modalTimeoutLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTimeoutLabel">連線逾時</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>無法在 60 秒內建立裝置通道。</p>
+                <p class="mb-0">請檢查裝置解鎖狀態與連接線，並重新嘗試連線。</p>
+            </div>
+            <div class="modal-footer d-flex justify-content-center">
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="developerError" tabindex="-1" role="dialog" aria-labelledby="developerErrorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="developerErrorLabel">開發者錯誤</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
                 <p id="developerErrorMessage"></p>
             </div>
             <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href = '/'">Close</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">關閉</button>
             </div>
         </div>
     </div>
 </div>
 
-
-
-
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
   <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
-      <strong class="me-auto">GeoPort</strong>
-      <small>Just Now</small>
+      <strong class="me-auto">🌸 花徑漫步</strong>
+      <small>剛剛</small>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
     <div class="toast-body">
@@ -3878,11 +4068,10 @@ function continueAfterDeveloperModeRequired() {
     </div>
   </div>
 </div>
-<!-- Toast Container -->
-  <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
-    <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 9999;"></div>
-  </div>
 
+<!-- Toast Container -->
+<div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
+  <div class="toast-container position-absolute top-0 end-0 p-3" style="z-index: 9999;"></div>
 </div>
 
 </body>
