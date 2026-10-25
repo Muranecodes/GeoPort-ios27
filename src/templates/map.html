@@ -900,6 +900,20 @@ body.dark-mode .badge-warning {
     box-shadow: 0 2px 6px rgba(243, 186, 100, 0.35);
 }
 
+/* CARTO API Key Banner */
+.carto-key-banner {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #E6E2D8);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(92, 107, 97, 0.08);
+}
+
+body.dark-mode .carto-key-banner {
+    background: var(--card-bg, #28312C);
+    border-color: var(--card-border, #38453E);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
     </style>
 </head>
 
@@ -935,6 +949,7 @@ body.dark-mode .badge-warning {
         </div>
 
         <div class="utility-cluster">
+            <button type="button" class="btn btn-sm btn-bento-outline text-nowrap" id="toggleCartoKeyBtn" onclick="toggleCartoKeyBanner()" title="設定 CARTO 金鑰">🔑 金鑰</button>
             <div class="form-check form-switch d-flex align-items-center mb-0">
                 <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
                 <label class="form-check-label bento-label ms-2 mb-0" for="darkModeSwitch">🌙 深色模式</label>
@@ -942,6 +957,17 @@ body.dark-mode .badge-warning {
             <a id="exit-btn" class="btn btn-sm btn-bento-outline text-nowrap" href="#" title="🌸 花徑漫步" onclick="exitApp()">🚪 離開</a>
         </div>
     </header>
+
+    <!-- CARTO API Key input banner (輸入並儲存後隱藏) -->
+    <div id="cartoKeyBanner" class="carto-key-banner bento-card py-2 px-3 mb-1 d-flex align-items-center justify-content-between" style="display: none;">
+        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+            <span class="bento-label text-nowrap"><i class="fa-solid fa-key me-1"></i> CARTO 免費金鑰：</span>
+            <input type="text" id="cartoKeyInput" class="form-control form-control-sm bento-input" placeholder="請貼上 CARTO API Key..." style="max-width: 360px;">
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="saveCartoKeyBtn" onclick="saveCartoApiKey()">💾 儲存並隱藏</button>
+            <a href="https://carto.com/basemaps/apikey" target="_blank" class="small text-muted text-nowrap ms-1" style="font-size: 11px;">(免費獲取 Key ↗)</a>
+        </div>
+        <button type="button" class="btn-close ms-2" aria-label="Close" onclick="hideCartoKeyBanner()"></button>
+    </div>
 
     <!-- Tier 2: Center Map Canvas Card -->
     <main class="bento-card bento-map-card">
@@ -1205,6 +1231,85 @@ var timeToNextPoint = 'N/A';
 var velocitySelect = 'walk';
 let isDrawingMode = false; // Flag to track drawing mode
 
+// CARTO API Key Management
+function getCartoTileUrl(apiKey) {
+    var base = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    if (apiKey && apiKey.trim()) {
+        return base + '?key=' + encodeURIComponent(apiKey.trim());
+    }
+    return base;
+}
+
+function getCartoApiKey() {
+    return localStorage.getItem('geoport_carto_api_key') || '';
+}
+
+function saveCartoApiKey() {
+    var input = document.getElementById('cartoKeyInput');
+    var key = input ? input.value.trim() : '';
+    if (key) {
+        localStorage.setItem('geoport_carto_api_key', key);
+    } else {
+        localStorage.removeItem('geoport_carto_api_key');
+    }
+    if (window.CartoDB_Voyager && typeof window.CartoDB_Voyager.setUrl === 'function') {
+        window.CartoDB_Voyager.setUrl(getCartoTileUrl(key));
+    }
+    hideCartoKeyBanner();
+}
+
+function hideCartoKeyBanner() {
+    var banner = document.getElementById('cartoKeyBanner');
+    if (banner) {
+        banner.style.display = 'none';
+    }
+}
+
+function toggleCartoKeyBanner() {
+    var banner = document.getElementById('cartoKeyBanner');
+    if (!banner) return;
+    if (banner.style.display === 'none' || banner.style.display === '') {
+        banner.style.display = 'flex';
+        var input = document.getElementById('cartoKeyInput');
+        if (input) {
+            input.value = localStorage.getItem('geoport_carto_api_key') || '';
+            input.focus();
+        }
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+function initCartoKeyBanner() {
+    var savedKey = localStorage.getItem('geoport_carto_api_key');
+    var banner = document.getElementById('cartoKeyBanner');
+    var input = document.getElementById('cartoKeyInput');
+    if (input && savedKey) {
+        input.value = savedKey;
+    }
+    if (banner) {
+        if (!savedKey) {
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+    if (input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveCartoApiKey();
+            }
+        });
+    }
+}
+
+window.getCartoTileUrl = getCartoTileUrl;
+window.getCartoApiKey = getCartoApiKey;
+window.saveCartoApiKey = saveCartoApiKey;
+window.hideCartoKeyBanner = hideCartoKeyBanner;
+window.toggleCartoKeyBanner = toggleCartoKeyBanner;
+window.initCartoKeyBanner = initCartoKeyBanner;
 
 // Initialize the map
 async function initializeMap() {
@@ -1220,19 +1325,6 @@ async function initializeMap() {
         attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> contributors'
     });
 
-    var openStreetMapTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    });
-
-    var OpenStreetMap_HOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-	    maxZoom: 19,
-	    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
-    });
-
-    var OPNVKarte = L.tileLayer('https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png', {
-	maxZoom: 18,
-	attribution: 'Map <a href="https://memomaps.de/">memomaps.de</a> <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    });
     var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.{ext}', {
 	minZoom: 0,
 	maxZoom: 20,
@@ -1276,20 +1368,13 @@ async function initializeMap() {
         attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         ext: 'png'
     });
-    var Esri_WorldStreetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
-    });
-    var Esri_WorldTopoMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
-    });
-    var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    });
-    var CartoDB_Voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    var savedCartoKey = localStorage.getItem('geoport_carto_api_key') || '';
+    var CartoDB_Voyager = L.tileLayer(getCartoTileUrl(savedCartoKey), {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 20
     });
+    window.CartoDB_Voyager = CartoDB_Voyager;
 
     // Load saved starting point from browser storage if present
     const savedLat = parseFloat(localStorage.getItem('geoport_starting_lat'));
@@ -1322,27 +1407,13 @@ async function initializeMap() {
     // Set the initial zoom level
     map.setZoom(initialZoom);
 
-    // // Use Stadia Maps as the tile layer
-    // L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
-    //     maxZoom: 19,
-    //     noWrap: true, // Prevent tiles from wrapping around the world
-    //     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> contributors'
-    // }).addTo(map);
+    // Add default tile layer (CartoDB Voyager)
+    CartoDB_Voyager.addTo(map);
 
-
-    // Add default tile layer (OpenStreetMap - 100% free, zero API key needed)
-    openStreetMapTileLayer.addTo(map);
-
-    // Define tile layer control options
+    // Define tile layer control options - Only CARTO and Stadia Maps as requested
     var baseLayers = {
-        "OpenStreetMap": openStreetMapTileLayer,
-        "Esri World Street Map": Esri_WorldStreetMap,
-        "Esri World Topo Map": Esri_WorldTopoMap,
-        "Esri World Imagery": Esri_WorldImagery,
-        "OpenStreetMap_HOT": OpenStreetMap_HOT,
-        "OPNVKarte": OPNVKarte,
-        "CartoDB Voyager (需API Key)": CartoDB_Voyager,
-        "Stadia Maps (需API Key)": stadiaTileLayer,
+        "CartoDB Voyager": CartoDB_Voyager,
+        "Stadia Maps": stadiaTileLayer,
         "Stadia Alidade Smooth": Stadia_AlidadeSmooth,
         "Stadia Alidade Smooth Dark": Stadia_AlidadeSmoothDark,
         "Stadia Alidade Satellite": Stadia_AlidadeSatellite,
@@ -4081,6 +4152,7 @@ function continueAfterDeveloperModeRequired() {
     document.addEventListener('DOMContentLoaded', function () {
     console.log("test");
     initializeMap();
+    initCartoKeyBanner();
     document.getElementById('rsdData').addEventListener('change', updateSetLocationButtonStatus);
     document.getElementById('coordinates').addEventListener('input', updateSetLocationButtonStatus);
     populateDeviceList();
