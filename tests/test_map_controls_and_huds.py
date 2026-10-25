@@ -24,118 +24,37 @@ class TestMapControlsAndHuds(unittest.TestCase):
         self.template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
         self.content = self.template_path.read_text(encoding="utf-8")
 
-    def test_default_tile_layer_and_baselayers_only_carto_and_stadia(self):
-        """CartoDB_Voyager.addTo(map) is default initial tile layer; baseLayers only contains CARTO and Stadia Maps."""
-        # CartoDB_Voyager must be added to map on startup
-        self.assertIn("CartoDB_Voyager.addTo(map);", self.content)
-        # stadiaTileLayer must NOT be added to map as default
-        self.assertNotIn("stadiaTileLayer.addTo(map);", self.content)
+    def test_default_tile_layer_and_baselayers_exclusively_stadia_maps(self):
+        """stadiaTileLayer.addTo(map) is executed as the default initial tile layer on startup (zero API key on localhost)."""
+        # Original Stadia Maps must be added to map on startup
+        self.assertIn("stadiaTileLayer.addTo(map);", self.content)
+        # CartoDB Voyager must NOT be added to map
+        self.assertNotIn("CartoDB_Voyager.addTo(map);", self.content)
 
-        # baseLayers dictionary must only contain CartoDB and Stadia Maps
-        self.assertIn('"CartoDB Voyager": CartoDB_Voyager', self.content)
+        # baseLayers dictionary must only contain Stadia Maps layers
         self.assertIn('"Stadia Maps": stadiaTileLayer', self.content)
         self.assertIn('"Stadia Alidade Smooth": Stadia_AlidadeSmooth', self.content)
         self.assertIn('"Stadia Outdoors": Stadia_Outdoors', self.content)
 
-        # Removed layers must NOT be present in baseLayers
+        # Excluded providers must NOT be present in baseLayers
+        self.assertNotIn('"CartoDB Voyager":', self.content)
         self.assertNotIn('"OpenStreetMap":', self.content)
         self.assertNotIn('"Esri World Street Map":', self.content)
         self.assertNotIn('"OpenStreetMap_HOT":', self.content)
         self.assertNotIn('"OPNVKarte":', self.content)
 
-    def test_carto_api_key_banner_and_storage(self):
-        """CARTO API key banner is present, collapsible, and persists key to localStorage."""
-        # DOM elements for CARTO key
-        self.assertIn('id="cartoKeyBanner"', self.content)
-        self.assertIn('id="cartoKeyInput"', self.content)
-        self.assertIn('id="saveCartoKeyBtn"', self.content)
-        self.assertIn('id="toggleCartoKeyBtn"', self.content)
-
-        # JavaScript functions and storage key
-        self.assertIn("geoport_carto_api_key", self.content)
-        self.assertIn("saveCartoApiKey", self.content)
-        self.assertIn("hideCartoKeyBanner", self.content)
-        self.assertIn("toggleCartoKeyBanner", self.content)
-        self.assertIn("initCartoKeyBanner", self.content)
-        self.assertIn("getCartoTileUrl", self.content)
-
-        # Test node behavior of saveCartoApiKey & toggleCartoKeyBanner
-        js_code = r"""
-        const fs = require('fs');
-        const content = fs.readFileSync(process.argv[1], 'utf-8');
-
-        const storage = {};
-        global.localStorage = {
-            getItem: (k) => storage[k] || null,
-            setItem: (k, v) => { storage[k] = String(v); },
-            removeItem: (k) => { delete storage[k]; }
-        };
-
-        const elements = {
-            cartoKeyBanner: { style: { display: 'none' } },
-            cartoKeyInput: { value: '', focus: () => {}, addEventListener: () => {} },
-            saveCartoKeyBtn: {}
-        };
-
-        global.window = global;
-        global.document = {
-            getElementById: (id) => elements[id] || null
-        };
-
-        // Extract functions from content
-        const urlFnMatch = content.match(/function getCartoTileUrl\([\s\S]*?\n\}/);
-        const saveFnMatch = content.match(/function saveCartoApiKey\([\s\S]*?\n\}/);
-        const hideFnMatch = content.match(/function hideCartoKeyBanner\([\s\S]*?\n\}/);
-        const toggleFnMatch = content.match(/function toggleCartoKeyBanner\([\s\S]*?\n\}/);
-        const initFnMatch = content.match(/function initCartoKeyBanner\([\s\S]*?\n\}/);
-
-        eval(urlFnMatch[0]);
-        eval(saveFnMatch[0]);
-        eval(hideFnMatch[0]);
-        eval(toggleFnMatch[0]);
-        eval(initFnMatch[0]);
-
-        global.CartoDB_Voyager = {
-            url: '',
-            setUrl: function(u) { this.url = u; }
-        };
-
-        // 1. Initial banner display when no key saved
-        initCartoKeyBanner();
-        const initialDisplay = elements.cartoKeyBanner.style.display;
-
-        // 2. Input a key and save
-        elements.cartoKeyInput.value = 'test_carto_api_key_123';
-        saveCartoApiKey();
-        const savedKey = localStorage.getItem('geoport_carto_api_key');
-        const displayAfterSave = elements.cartoKeyBanner.style.display;
-        const tileUrlAfterSave = global.CartoDB_Voyager.url;
-
-        // 3. Toggle banner
-        toggleCartoKeyBanner();
-        const displayAfterToggle = elements.cartoKeyBanner.style.display;
-
-        console.log(JSON.stringify({
-            initialDisplay,
-            savedKey,
-            displayAfterSave,
-            tileUrlAfterSave,
-            displayAfterToggle
-        }));
-        """
-
-        result = subprocess.run(
-            ["node", "-e", js_code, str(self.template_path)],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        data = json.loads(result.stdout)
-        self.assertEqual(data["initialDisplay"], "flex", "Banner should be visible initially if no key is saved")
-        self.assertEqual(data["savedKey"], "test_carto_api_key_123")
-        self.assertEqual(data["displayAfterSave"], "none", "Banner should be hidden after save")
-        self.assertIn("key=test_carto_api_key_123", data["tileUrlAfterSave"])
-        self.assertEqual(data["displayAfterToggle"], "flex", "Banner should be toggled visible on toggle button click")
+    def test_clean_ui_no_carto_key_banner(self):
+        """CARTO API key banner, input, buttons, and storage methods are completely removed for clean unencumbered UI."""
+        self.assertNotIn('id="cartoKeyBanner"', self.content)
+        self.assertNotIn('id="cartoKeyInput"', self.content)
+        self.assertNotIn('id="saveCartoKeyBtn"', self.content)
+        self.assertNotIn('id="toggleCartoKeyBtn"', self.content)
+        self.assertNotIn("geoport_carto_api_key", self.content)
+        self.assertNotIn("saveCartoApiKey", self.content)
+        self.assertNotIn("hideCartoKeyBanner", self.content)
+        self.assertNotIn("toggleCartoKeyBanner", self.content)
+        self.assertNotIn("initCartoKeyBanner", self.content)
+        self.assertNotIn("getCartoTileUrl", self.content)
 
     def test_auto_nav_route_polyline_styling(self):
         """Auto Navigation route polyline is styled with #6B9E78, rounded join and cap."""

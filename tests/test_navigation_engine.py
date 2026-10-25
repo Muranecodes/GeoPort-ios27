@@ -464,6 +464,35 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         self.assertEqual(self.mock_sink.call_count, 1)
         self.assertAlmostEqual(self.controller.traveled_distance_m, 10.0, delta=0.5)
 
+    def test_step_tick_failsafe_on_sink_error_freezes_coords_and_pauses(self):
+        """When location sink raises an error (tunnel loss), coords are frozen at previous position and navigation is paused."""
+        class FailingSink(MockLocationSink):
+            def __init__(self):
+                super().__init__()
+                self.fail = False
+
+            def set_location(self, lat, lng):
+                if self.fail:
+                    raise ConnectionError("DVT tunnel socket disconnected")
+                super().set_location(lat, lng)
+
+        p1 = (25.0, 121.0)
+        p2 = (25.0, 121.1)
+        failing_sink = FailingSink()
+        ctrl = NavigationController(sink=failing_sink, tick_interval=1.0)
+        ctrl.start([p1, p2], speed_kmh=36.0)
+
+        init_lat, init_lng = ctrl.current_lat, ctrl.current_lng
+        init_traveled = ctrl.traveled_distance_m
+
+        failing_sink.fail = True
+        active = ctrl.step_tick(dt=1.0)
+        self.assertFalse(active)
+        self.assertTrue(ctrl.paused, "Navigation must be auto-paused on sink failure")
+        self.assertEqual(ctrl.current_lat, init_lat, "Coordinates must remain frozen at previous position")
+        self.assertEqual(ctrl.current_lng, init_lng, "Coordinates must remain frozen at previous position")
+        self.assertEqual(ctrl.traveled_distance_m, init_traveled, "Traveled distance must not advance on failure")
+
     def test_update_speed_updates_eta(self):
         """Dynamically updating speed recalculates remaining ETA proportionally."""
         p1 = (0.0, 0.0)

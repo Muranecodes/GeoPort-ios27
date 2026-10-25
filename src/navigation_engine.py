@@ -115,17 +115,23 @@ class NavigationController:
                 return None
             return self.current_lat, self.current_lng
 
-    def _dispatch(self, lat: float, lng: float) -> None:
+    def _dispatch(self, lat: float, lng: float) -> bool:
         """
         Dispatches coordinates to the active LocationSink (if available),
-        logging any exceptions without raising.
+        logging any exceptions without raising. Returns True on success or no-op, False on failure.
         """
         target_sink = self.sink
         if target_sink is not None:
             try:
                 target_sink.set_location(lat, lng)
+                return True
             except Exception as e:
                 logger.exception("Error dispatching location to sink: %s", e)
+                with self._lock:
+                    self.paused = True
+                    self._last_error = str(e)
+                return False
+        return True
 
     def dispatch_current_location(self) -> Tuple[float, float]:
         """
@@ -413,6 +419,7 @@ class NavigationController:
                 return self.active
 
             prev_lat, prev_lng = self.current_lat, self.current_lng
+            prev_traveled = self.traveled_distance_m
             prev_dispatch = self._last_dispatch_time
             current_speed = self.speed_kmh
 
@@ -466,7 +473,16 @@ class NavigationController:
             rem_dist,
         )
 
-        self._dispatch(target_lat, target_lng)
+        success = self._dispatch(target_lat, target_lng)
+        if not success:
+            with self._lock:
+                self.current_lat = prev_lat
+                self.current_lng = prev_lng
+                self.traveled_distance_m = prev_traveled
+                self.remaining_distance_m = max(0.0, self.total_distance_m - prev_traveled)
+                self.paused = True
+            return False
+
         if finished:
             self._stop_event.set()
 

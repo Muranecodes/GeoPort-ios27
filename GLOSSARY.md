@@ -32,6 +32,10 @@ _Avoid_: Bike preset, cycling speed, 20kmh
 Automatic viewport panning that keeps the simulated location marker centered on the map during Auto Navigation or Manual Steering, disengaging automatically when the user manually drags the map.
 _Avoid_: Map lock, auto-pan, follow mode
 
+**Base Map Provider**:
+The exclusive map tile service provider (Stadia Maps) supplying zero-configuration raster tiles on localhost without API key requirements.
+_Avoid_: CARTO, OpenStreetMap, Esri, tile server
+
 **Fuel Mode**:
 A deprecated legacy subsystem that scraped Australian fuel prices and positioned simulated GPS coordinates at gas stations. Slated for complete removal.
 _Avoid_: Fuel prices, fuel data
