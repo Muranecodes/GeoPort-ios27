@@ -467,152 +467,226 @@ body.dark-mode select.bento-select option {
 .menu-item:hover {
     background-color: #e9ecef;
 }
-/* Adjust the styling of the custom button to remove any outlines */
+/* Top-left Leaflet filelayer declutter: hide unused controls while keeping pill buttons visible */
+.leaflet-control-filelayer {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.leaflet-control-filelayer > *:not(#autoNavButton):not(#cameraFollowButton),
+.leaflet-control-filelayer a:not(#autoNavButton):not(#cameraFollowButton),
+.leaflet-control-filelayer button:not(#autoNavButton):not(#cameraFollowButton),
+.leaflet-control-filelayer #styles-menu,
+.leaflet-control-filelayer .leaflet-control-custom {
+    display: none !important;
+}
+
 .leaflet-control-filelayer .leaflet-control-filelayer-custom {
-    outline: none !important; /* Remove any outline */
-    border: none !important; /* Remove any border */
-    box-shadow: none !important; /* Remove any box-shadow */
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-/* Add margin to each button except for the last one */
-.leaflet-control-filelayer-custom {
-    margin-bottom: 1px; /* Adjust the margin as needed */
-}
-
-/* Remove margin from the last button */
-.leaflet-control-filelayer-custom:first-child {
-    margin-top: 1px;
-}
-
-/* Add a bottom border to each button except for the last one */
-.leaflet-control-filelayer-custom:not(:last-child) {
-    border-bottom: 1px solid gray;
-}
-.leaflet-control-filelayer .leaflet-control-send-gpx1 {
-    outline: none !important; /* Remove any outline */
-    border: none !important; /* Remove any border */
-    box-shadow: none !important; /* Remove any box-shadow */
-}*/
-.custom-popup-content {
-        width: 300px; /* Adjust the width as needed */
-    }
-.time-to-next-point-control-container {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-}
 /* Hide EasyButton containers */
 .leaflet-bar.easy-button-container.leaflet-control {
     display: none;
 }
+
 /* Custom CSS to make layer control button smaller */
 .leaflet-control-layers-toggle {
-    width: 10px; /* Adjust width as needed */
-    height: 10px; /* Adjust height as needed */
-    font-size: 8px; /* Adjust font size as needed */
-    padding: 4px; /* Adjust padding as needed */
+    width: 10px;
+    height: 10px;
+    font-size: 8px;
+    padding: 4px;
 }
 
-/* Active state for toolbar buttons (Auto Nav, Camera Tracking, Draw Track) */
+/* Pill buttons for Auto Navigation and Camera Tracking */
+#autoNavButton,
+#cameraFollowButton {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 6px 14px !important;
+    border-radius: 999px !important;
+    background: var(--card-bg, rgba(255, 255, 255, 0.95)) !important;
+    color: var(--text-primary, #2F3A34) !important;
+    border: 1px solid var(--card-border, #E6E2D8) !important;
+    box-shadow: 0 4px 12px rgba(92, 107, 97, 0.12) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    transition: all 0.2s ease !important;
+}
+
+#autoNavButton i,
+#cameraFollowButton i {
+    font-size: 15px !important;
+    line-height: 1 !important;
+}
+
+#autoNavButton:hover,
+#cameraFollowButton:hover {
+    background: var(--accent-primary-tint, #EAF3EC) !important;
+    color: var(--accent-primary-hover, #5A8B66) !important;
+}
+
 .leaflet-bar button.active,
 .leaflet-control-filelayer-custom.active,
 .easy-button-button.active,
 #autoNavButton.active,
 #cameraFollowButton.active {
-    background-color: #007bff !important;
+    background-color: var(--accent-primary, #6B9E78) !important;
     color: #ffffff !important;
+    border-color: var(--accent-primary, #6B9E78) !important;
+    box-shadow: 0 4px 12px rgba(107, 158, 120, 0.35) !important;
 }
+
 .leaflet-bar button.active i,
 .leaflet-control-filelayer-custom.active i,
 .easy-button-button.active i,
 #autoNavButton.active i,
-#cameraFollowButton.active i {
+#cameraFollowButton.active i,
+#autoNavButton.active span,
+#cameraFollowButton.active span {
     color: #ffffff !important;
+}
+
+body.dark-mode #autoNavButton,
+body.dark-mode #cameraFollowButton {
+    background: var(--card-bg, #28312C) !important;
+    color: var(--text-primary, #ECF2EE) !important;
+    border-color: var(--card-border, #38453E) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode #autoNavButton:hover,
+body.dark-mode #cameraFollowButton:hover {
+    background: rgba(127, 179, 141, 0.2) !important;
+    color: var(--accent-primary, #7FB38D) !important;
+}
+
+body.dark-mode #autoNavButton.active,
+body.dark-mode #cameraFollowButton.active {
+    background-color: var(--accent-primary, #7FB38D) !important;
+    color: #1E2522 !important;
+    border-color: var(--accent-primary, #7FB38D) !important;
+}
+
+body.dark-mode #autoNavButton.active i,
+body.dark-mode #cameraFollowButton.active i,
+body.dark-mode #autoNavButton.active span,
+body.dark-mode #cameraFollowButton.active span {
+    color: #1E2522 !important;
 }
 
 /* Speed Control Widget Styles */
 .speed-control-widget {
-    background: #ffffff;
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--card-bg, rgba(255, 255, 255, 0.94));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 12px 14px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(92, 107, 97, 0.12);
+    font-family: inherit;
     font-size: 13px;
     z-index: 1000;
     user-select: none;
-    min-width: 250px;
-    border: 1px solid rgba(0,0,0,0.1);
+    min-width: 270px;
+    border: 1px solid var(--card-border, #E6E2D8);
+    transition: all 0.25s ease;
 }
 
 body.dark-mode .speed-control-widget {
-    background: #2b2b2b;
-    color: #e0e0e0;
-    border-color: #555;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    background: var(--card-bg, rgba(40, 49, 44, 0.94));
+    color: var(--text-primary, #ECF2EE);
+    border-color: var(--card-border, #38453E);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .speed-control-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-weight: 600;
     font-size: 12px;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #555;
+    color: var(--text-secondary, #6E7B73);
 }
 
 body.dark-mode .speed-control-header {
-    color: #aaa;
+    color: var(--text-secondary, #A3B1A8);
+}
+
+#speedDisplayBadge {
+    background: var(--accent-primary, #6B9E78);
+    color: #ffffff;
+    border-radius: 999px;
+    font-weight: 700;
+    padding: 3px 8px;
+    font-size: 11px;
+    transition: all 0.2s ease;
 }
 
 .speed-presets-group {
     display: flex;
-    gap: 4px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 10px;
 }
 
 .speed-preset-btn {
     flex: 1;
-    padding: 3px 6px;
-    font-size: 11px;
-    font-weight: 500;
-    border: 1px solid #ced4da;
-    background: #f8f9fa;
-    color: #333;
-    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--card-border, #E6E2D8);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--text-primary, #2F3A34);
+    border-radius: 999px;
     cursor: pointer;
     text-align: center;
-    transition: all 0.15s ease-in-out;
+    transition: all 0.2s ease-in-out;
 }
 
 .speed-preset-btn:hover {
-    background: #e2e6ea;
-    border-color: #dae0e5;
+    background: var(--accent-primary-tint, #EAF3EC);
+    border-color: var(--accent-primary, #6B9E78);
+    color: var(--accent-primary-hover, #5A8B66);
 }
 
 .speed-preset-btn.active {
-    background: #007bff;
+    background: var(--accent-primary, #6B9E78);
     color: #ffffff;
-    border-color: #007bff;
-    box-shadow: 0 1px 3px rgba(0,123,255,0.4);
+    border-color: var(--accent-primary, #6B9E78);
+    box-shadow: 0 2px 8px rgba(107, 158, 120, 0.35);
 }
 
 body.dark-mode .speed-preset-btn {
-    background: #3a3a3a;
-    color: #ddd;
-    border-color: #555;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary, #ECF2EE);
+    border-color: var(--card-border, #38453E);
 }
 
 body.dark-mode .speed-preset-btn:hover {
-    background: #4a4a4a;
+    background: rgba(127, 179, 141, 0.15);
+    color: var(--accent-primary, #7FB38D);
 }
 
 body.dark-mode .speed-preset-btn.active {
-    background: #0d6efd;
-    color: #fff;
-    border-color: #0d6efd;
+    background: var(--accent-primary, #7FB38D);
+    color: #1E2522;
+    border-color: var(--accent-primary, #7FB38D);
+    box-shadow: 0 2px 8px rgba(127, 179, 141, 0.4);
 }
 
 .speed-inputs-row {
@@ -631,6 +705,7 @@ body.dark-mode .speed-preset-btn.active {
     width: 100%;
     cursor: pointer;
     height: 4px;
+    accent-color: var(--accent-primary, #6B9E78);
 }
 
 .speed-number-wrap {
@@ -642,77 +717,109 @@ body.dark-mode .speed-preset-btn.active {
 
 #speedNumberInput {
     width: 60px;
-    padding: 2px 4px;
+    padding: 3px 6px;
     font-size: 12px;
-    border-radius: 4px;
-    border: 1px solid #ced4da;
+    border-radius: 8px;
+    border: 1px solid var(--card-border, #E6E2D8);
+    background: var(--input-bg, #FFFFFF);
+    color: var(--text-primary, #2F3A34);
     text-align: right;
 }
 
 body.dark-mode #speedNumberInput {
-    background: #3a3a3a;
-    color: #fff;
-    border-color: #555;
+    background: #1E2522;
+    color: #ECF2EE;
+    border-color: var(--card-border, #38453E);
 }
 
 .speed-unit {
     font-size: 11px;
-    color: #6c757d;
+    color: var(--text-secondary, #6E7B73);
 }
 
 body.dark-mode .speed-unit {
-    color: #aaa;
+    color: var(--text-secondary, #A3B1A8);
+}
+
+/* Planting Mode Active Styling (Blossom Pink) */
+#speedControlWidget.planting-mode-active #speedPresetBike.active,
+#speedControlWidget.planting-mode-active #speedDisplayBadge,
+#speedDisplayBadge.planting-mode-active {
+    background: #E8829C !important;
+    color: #ffffff !important;
+    border-color: #E8829C !important;
+    box-shadow: 0 2px 8px rgba(232, 130, 156, 0.4) !important;
+}
+
+#speedControlWidget.planting-mode-active #speedRangeSlider {
+    accent-color: #E8829C !important;
+}
+
+body.dark-mode #speedControlWidget.planting-mode-active #speedPresetBike.active,
+body.dark-mode #speedControlWidget.planting-mode-active #speedDisplayBadge,
+body.dark-mode #speedDisplayBadge.planting-mode-active {
+    background: #F299B1 !important;
+    color: #1E2522 !important;
+    border-color: #F299B1 !important;
+    box-shadow: 0 2px 8px rgba(242, 153, 177, 0.5) !important;
+}
+
+body.dark-mode #speedControlWidget.planting-mode-active #speedRangeSlider {
+    accent-color: #F299B1 !important;
 }
 
 /* Navigation HUD Styles */
 .navigation-hud {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--card-bg, rgba(255, 255, 255, 0.94));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(92, 107, 97, 0.14);
+    font-family: inherit;
     font-size: 13px;
     z-index: 1000;
     user-select: none;
-    min-width: 250px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease-in-out;
+    min-width: 270px;
+    border: 1px solid var(--card-border, #E6E2D8);
+    transition: all 0.25s ease;
+    overflow: hidden;
 }
 
 body.dark-mode .navigation-hud {
-    background: #2b2b2b;
-    color: #e0e0e0;
-    border-color: #555;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    background: var(--card-bg, rgba(40, 49, 44, 0.94));
+    color: var(--text-primary, #ECF2EE);
+    border-color: var(--card-border, #38453E);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-body.dark-mode .navigation-hud .card-body {
-    background: #2b2b2b;
-    color: #e0e0e0;
+.navigation-hud .card-body {
+    background: transparent;
+    padding: 12px 14px;
 }
 
 .navigation-hud-header {
     font-weight: 600;
     font-size: 13px;
-    color: #333;
+    color: var(--text-primary, #2F3A34);
 }
 
 body.dark-mode .navigation-hud-header {
-    color: #f0f0f0;
+    color: var(--text-primary, #ECF2EE);
 }
 
 .hud-stats-row {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    background: #f8f9fa;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
+    background: var(--bg-base, #FAF8F5);
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border, #E6E2D8);
 }
 
 body.dark-mode .hud-stats-row {
-    background: #222222;
-    border-color: #444;
+    background: #1E2522;
+    border-color: #38453E;
 }
 
 .hud-stat-item {
@@ -723,22 +830,22 @@ body.dark-mode .hud-stats-row {
 .hud-stat-label {
     display: block;
     font-size: 10px;
-    color: #6c757d;
+    color: var(--text-secondary, #6E7B73);
     text-transform: uppercase;
 }
 
 body.dark-mode .hud-stat-label {
-    color: #aaa;
+    color: var(--text-secondary, #A3B1A8);
 }
 
 .hud-stat-value {
     font-weight: 600;
     font-size: 12px;
-    color: #212529;
+    color: var(--text-primary, #2F3A34);
 }
 
 body.dark-mode .hud-stat-value {
-    color: #fff;
+    color: var(--text-primary, #ECF2EE);
 }
 
 .hud-actions {
@@ -794,13 +901,13 @@ body.dark-mode .hud-stat-value {
         <!-- Speed Control Toolbar Widget -->
         <div id="speedControlWidget" class="speed-control-widget mb-2">
             <div class="speed-control-header">
-                <span><i class="fa-solid fa-gauge-high mr-1"></i> Speed Control</span>
-                <span id="speedDisplayBadge" class="badge badge-primary">5 km/h</span>
+                <span><i class="fa-solid fa-gauge-high mr-1"></i> 移動速度</span>
+                <span id="speedDisplayBadge" class="badge">5 km/h</span>
             </div>
             <div class="speed-presets-group" role="group" aria-label="Speed Presets">
-                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)">🚶 散步 · Walk (5 km/h)</button>
-                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)">🌸 種花 (19.1 km/h)</button>
-                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)">🚗 開車 · Drive (60 km/h)</button>
+                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)" title="Walk (5 km/h)">🚶 散步<span class="d-none">Walk (5 km/h)</span></button>
+                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)" title="🌸 種花 (19.1 km/h)">🌸 種花<span class="d-none">19.1 km/h</span></button>
+                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)" title="Drive (60 km/h)">🚗 開車<span class="d-none">Drive (60 km/h)</span></button>
             </div>
             <div class="speed-inputs-row">
                 <div class="speed-slider-wrap">
@@ -1171,7 +1278,7 @@ async function initializeMap() {
 
 
     // Add default tile layer
-    stadiaTileLayer.addTo(map);
+    CartoDB_Voyager.addTo(map);
 
     // Define tile layer control options
     var baseLayers = {
@@ -1490,7 +1597,7 @@ var autoNavButton = L.easyButton({
     id: 'autoNavButton',
     states: [{
         stateName: 'auto-nav',
-        icon: '<i class="lni lni-direction-alt"></i>',
+        icon: '<i class="lni lni-direction-alt mr-1"></i><span>自動導航</span>',
         title: 'Auto Navigation',
         onClick: function(btn, map) {
             toggleAutoNavMode();
@@ -1498,8 +1605,6 @@ var autoNavButton = L.easyButton({
     }]
 });
 autoNavButton.button.id = 'autoNavButton';
-autoNavButton.button.style.fontSize = '24px';
-autoNavButton.button.style.paddingLeft = '4px';
 autoNavButton.addTo(map);
 
 if (fileLayerControlContainer) {
@@ -1512,7 +1617,7 @@ var cameraFollowButton = L.easyButton({
     id: 'cameraFollowButton',
     states: [{
         stateName: 'camera-follow',
-        icon: '<i class="lni lni-target"></i>',
+        icon: '<i class="lni lni-target mr-1"></i><span>鏡頭跟隨</span>',
         title: 'Camera Tracking (Locked)',
         onClick: function(btn, map) {
             toggleCameraLock();
@@ -1520,8 +1625,6 @@ var cameraFollowButton = L.easyButton({
     }]
 });
 cameraFollowButton.button.id = 'cameraFollowButton';
-cameraFollowButton.button.style.fontSize = '24px';
-cameraFollowButton.button.style.paddingLeft = '4px';
 cameraFollowButton.addTo(map);
 
 if (fileLayerControlContainer) {
@@ -2388,6 +2491,9 @@ function syncSpeedControls(speed) {
     const walkBtn = document.getElementById('speedPresetWalk');
     const bikeBtn = document.getElementById('speedPresetBike');
     const driveBtn = document.getElementById('speedPresetDrive');
+    const widget = document.getElementById('speedControlWidget');
+
+    const isPlanting = Math.abs(speed - 19.1) < 0.01;
 
     if (numInput && parseFloat(numInput.value) !== speed) {
         numInput.value = speed;
@@ -2400,11 +2506,16 @@ function syncSpeedControls(speed) {
     }
     if (badge) {
         badge.innerText = speed + ' km/h';
+        badge.classList.toggle('planting-mode-active', isPlanting);
     }
 
     if (walkBtn) walkBtn.classList.toggle('active', Math.abs(speed - 5.0) < 0.01);
-    if (bikeBtn) bikeBtn.classList.toggle('active', Math.abs(speed - 19.1) < 0.01);
+    if (bikeBtn) bikeBtn.classList.toggle('active', isPlanting);
     if (driveBtn) driveBtn.classList.toggle('active', Math.abs(speed - 60.0) < 0.01);
+
+    if (widget) {
+        widget.classList.toggle('planting-mode-active', isPlanting);
+    }
 }
 
 function updateBackendSpeed(speed) {
@@ -3001,9 +3112,10 @@ async function handleAutoNavMapClick(e) {
         clearNavRoute();
         if (typeof map !== 'undefined' && map && typeof L !== 'undefined' && typeof L.polyline === 'function') {
             window.navRoutePolyline = L.polyline(routeCoords, {
-                color: '#007bff',
-                weight: 5,
-                opacity: 0.8,
+                color: '#6B9E78',
+                weight: 6,
+                opacity: 0.88,
+                lineCap: 'round',
                 lineJoin: 'round'
             }).addTo(map);
         }
