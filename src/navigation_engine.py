@@ -15,6 +15,7 @@ from geometry import (
     calculate_step,
     destination_point,
     get_bearing_for_direction,
+    haversine_distance,
     interpolate_polyline,
     validate_speed,
 )
@@ -64,7 +65,9 @@ class NavigationController:
         self._last_dispatch_time: Optional[float] = None
 
         self._lock = threading.Lock()
+        self._lifecycle_lock = threading.RLock()
         self._stop_event = threading.Event()
+        self._worker_generation: int = 0
         self._thread: Optional[threading.Thread] = None
 
         self.waypoints: List[Tuple[float, float]] = []
@@ -112,17 +115,23 @@ class NavigationController:
                 return None
             return self.current_lat, self.current_lng
 
-    def _dispatch(self, lat: float, lng: float) -> None:
+    def _dispatch(self, lat: float, lng: float) -> bool:
         """
         Dispatches coordinates to the active LocationSink (if available),
-        logging any exceptions without raising.
+        logging any exceptions without raising. Returns True on success or no-op, False on failure.
         """
         target_sink = self.sink
         if target_sink is not None:
             try:
                 target_sink.set_location(lat, lng)
+                return True
             except Exception as e:
                 logger.exception("Error dispatching location to sink: %s", e)
+                with self._lock:
+                    self.paused = True
+                    self._last_error = str(e)
+                return False
+        return True
 
     def dispatch_current_location(self) -> Tuple[float, float]:
         """
@@ -208,7 +217,14 @@ class NavigationController:
         # Anti-burst check (ADR 0001)
         now = self._clock()
         with self._lock:
-            if self._last_dispatch_time is not None and (now - self._last_dispatch_time) < self.min_step_interval:
+            prev_dispatch = self._last_dispatch_time
+            if prev_dispatch is not None and (now - prev_dispatch) < self.min_step_interval:
+                logger.debug(
+                    "Dropped manual burst step (%s): elapsed=%.3fs < min_step_interval=%.2fs",
+                    direction,
+                    now - prev_dispatch,
+                    self.min_step_interval,
+                )
                 return {
                     "lat": self.current_lat,
                     "lng": self.current_lng,
@@ -226,6 +242,21 @@ class NavigationController:
             self.has_location = True
             self._last_dispatch_time = now
 
+        dt_actual = (now - prev_dispatch) if (prev_dispatch is not None and now > prev_dispatch) else 1.0
+        eff_kmh = (distance_meters / dt_actual) * 3.6 if dt_actual > 0 else step_speed
+        logger.info(
+            "Manual step [%s]: (%.6f, %.6f) -> (%.6f, %.6f) | step=%.2fm | dt=%.3fs | speed=%.1f km/h (eff=%.1f km/h)",
+            direction,
+            cur_lat,
+            cur_lng,
+            new_lat,
+            new_lng,
+            distance_meters,
+            dt_actual,
+            step_speed,
+            eff_kmh,
+        )
+
         self._dispatch(new_lat, new_lng)
 
         return {
@@ -242,84 +273,123 @@ class NavigationController:
         """
         Stops any existing navigation, initializes route state, and starts the 1Hz background worker thread.
         """
-        self.stop()
+        with self._lifecycle_lock:
+            self.stop()
 
-        if not waypoints or not isinstance(waypoints, list):
-            raise ValueError("Waypoints must be a non-empty list of coordinate pairs.")
+            if not waypoints or not isinstance(waypoints, list):
+                raise ValueError("Waypoints must be a non-empty list of coordinate pairs.")
 
-        clean_pts: List[Tuple[float, float]] = []
-        for i, pt in enumerate(waypoints):
-            if not isinstance(pt, (list, tuple)) or len(pt) < 2:
-                raise ValueError(f"Waypoint at index {i} is invalid; expected [lat, lng].")
-            try:
-                lat = float(pt[0])
-                lng = float(pt[1])
-            except (ValueError, TypeError):
-                raise ValueError(f"Waypoint at index {i} contains non-numeric coordinates.")
-            if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
-                raise ValueError(f"Waypoint at index {i} coordinates out of bounds: ({lat}, {lng})")
-            clean_pts.append((lat, lng))
+            clean_pts: List[Tuple[float, float]] = []
+            for i, pt in enumerate(waypoints):
+                if not isinstance(pt, (list, tuple)) or len(pt) < 2:
+                    raise ValueError(f"Waypoint at index {i} is invalid; expected [lat, lng].")
+                try:
+                    lat = float(pt[0])
+                    lng = float(pt[1])
+                except (ValueError, TypeError):
+                    raise ValueError(f"Waypoint at index {i} contains non-numeric coordinates.")
+                if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+                    raise ValueError(f"Waypoint at index {i} coordinates out of bounds: ({lat}, {lng})")
+                clean_pts.append((lat, lng))
 
-        if len(clean_pts) < 2:
-            raise ValueError("Waypoints must contain at least 2 coordinate pairs.")
+            if len(clean_pts) < 2:
+                raise ValueError("Waypoints must contain at least 2 coordinate pairs.")
 
-        if speed_kmh is None:
+            if speed_kmh is None:
+                with self._lock:
+                    speed = self.speed_kmh
+            else:
+                speed = validate_speed(speed_kmh)
+
+            total_dist = calculate_polyline_distance(clean_pts)
+            speed_mps = speed / 3.6
+            eta_s = round(total_dist / speed_mps, 1) if speed_mps > 0 else 0.0
+
+            worker_stop_event = threading.Event()
             with self._lock:
-                speed = self.speed_kmh
-        else:
-            speed = validate_speed(speed_kmh)
+                self._worker_generation += 1
+                gen_id = self._worker_generation
+                self._stop_event.set()
+                self._stop_event = worker_stop_event
 
-        total_dist = calculate_polyline_distance(clean_pts)
-        speed_mps = speed / 3.6
-        eta_s = round(total_dist / speed_mps, 1) if speed_mps > 0 else 0.0
+                self.waypoints = clean_pts
+                self.speed_kmh = speed
+                self.total_distance_m = total_dist
+                self.traveled_distance_m = 0.0
+                self.current_lat = clean_pts[0][0]
+                self.current_lng = clean_pts[0][1]
+                self.has_location = True
+                self.remaining_distance_m = total_dist
+                self.remaining_time_s = eta_s
+                self.active = True
+                self.paused = False
+                self.completed = False
+                now = self._clock()
+                if (
+                    total_dist > 0
+                    and self._last_dispatch_time is not None
+                    and (now - self._last_dispatch_time) < self.min_step_interval
+                ):
+                    should_dispatch_initial = False
+                else:
+                    self._last_dispatch_time = now
+                    should_dispatch_initial = True
+                init_lat, init_lng = self.current_lat, self.current_lng
 
-        with self._lock:
-            self.waypoints = clean_pts
-            self.speed_kmh = speed
-            self.total_distance_m = total_dist
-            self.traveled_distance_m = 0.0
-            self.current_lat = clean_pts[0][0]
-            self.current_lng = clean_pts[0][1]
-            self.has_location = True
-            self.remaining_distance_m = total_dist
-            self.remaining_time_s = eta_s
-            self.active = True
-            self.paused = False
-            self.completed = False
-            self._stop_event.clear()
-            self._last_dispatch_time = self._clock()
-            init_lat, init_lng = self.current_lat, self.current_lng
+            if total_dist == 0:
+                with self._lock:
+                    self.active = False
+                    self.completed = True
+                    self.remaining_distance_m = 0.0
+                    self.remaining_time_s = 0.0
+                    self._last_dispatch_time = self._clock()
+                    worker_stop_event.set()
+                self._dispatch(init_lat, init_lng)
+                return {
+                    "status": "started",
+                    "total_distance_m": 0.0,
+                    "estimated_duration_s": 0.0,
+                }
 
-        if total_dist == 0:
+            logger.info(
+                "Navigation start [gen=%d]: (%f, %f) -> (%f, %f) | waypoints=%d | dist=%.1fm | speed=%.1f km/h | eta=%.1fs | initial_dispatch=%s",
+                gen_id,
+                clean_pts[0][0],
+                clean_pts[0][1],
+                clean_pts[-1][0],
+                clean_pts[-1][1],
+                len(clean_pts),
+                total_dist,
+                speed,
+                eta_s,
+                should_dispatch_initial,
+            )
+
+            if should_dispatch_initial:
+                self._dispatch(init_lat, init_lng)
+
             with self._lock:
-                self.active = False
-                self.completed = True
-                self.remaining_distance_m = 0.0
-                self.remaining_time_s = 0.0
-                self._last_dispatch_time = self._clock()
-            self._dispatch(init_lat, init_lng)
+                if self._worker_generation == gen_id and self.active and not worker_stop_event.is_set():
+                    worker_thread = threading.Thread(
+                        target=self._worker_loop,
+                        args=(gen_id, worker_stop_event),
+                        daemon=True,
+                        name=f"GeoPortNavigationWorker-{gen_id}",
+                    )
+                    self._thread = worker_thread
+                    worker_thread.start()
+
             return {
                 "status": "started",
-                "total_distance_m": 0.0,
-                "estimated_duration_s": 0.0,
+                "total_distance_m": round(total_dist, 1),
+                "estimated_duration_s": eta_s,
             }
 
-        self._dispatch(init_lat, init_lng)
-
-        self._thread = threading.Thread(
-            target=self._worker_loop,
-            daemon=True,
-            name="GeoPortNavigationWorker"
-        )
-        self._thread.start()
-
-        return {
-            "status": "started",
-            "total_distance_m": round(total_dist, 1),
-            "estimated_duration_s": eta_s,
-        }
-
-    def step_tick(self, dt: Optional[float] = None) -> bool:
+    def step_tick(
+        self,
+        dt: Optional[float] = None,
+        expected_generation: Optional[int] = None,
+    ) -> bool:
         """
         Advances the navigation state by one tick of duration dt (defaults to tick_interval).
         Returns True if navigation remains active, False if completed or stopped.
@@ -327,8 +397,31 @@ class NavigationController:
         step_dt = self.tick_interval if dt is None else float(dt)
 
         with self._lock:
+            if expected_generation is not None and self._worker_generation != expected_generation:
+                return False
+
             if not self.active or self.completed or self.paused:
                 return self.active
+
+            now = self._clock()
+            if (
+                expected_generation is not None
+                and self.tick_interval >= self.min_step_interval
+                and self._last_dispatch_time is not None
+                and (now - self._last_dispatch_time) < self.min_step_interval
+            ):
+                logger.warning(
+                    "Dropped burst navigation tick [gen=%s]: elapsed=%.3fs < min_step_interval=%.2fs",
+                    expected_generation,
+                    now - self._last_dispatch_time,
+                    self.min_step_interval,
+                )
+                return self.active
+
+            prev_lat, prev_lng = self.current_lat, self.current_lng
+            prev_traveled = self.traveled_distance_m
+            prev_dispatch = self._last_dispatch_time
+            current_speed = self.speed_kmh
 
             step_distance = (self.speed_kmh / 3.6) * step_dt
             self.traveled_distance_m += step_distance
@@ -341,7 +434,6 @@ class NavigationController:
                 self.remaining_time_s = 0.0
                 self.active = False
                 self.completed = True
-                self._stop_event.set()
                 target_lat, target_lng = self.current_lat, self.current_lng
                 finished = True
             else:
@@ -361,34 +453,83 @@ class NavigationController:
                 target_lat, target_lng = self.current_lat, self.current_lng
                 finished = False
 
-            self._last_dispatch_time = self._clock()
+            rem_dist = self.remaining_distance_m
+            self._last_dispatch_time = now
 
-        self._dispatch(target_lat, target_lng)
+        actual_dist = haversine_distance(prev_lat, prev_lng, target_lat, target_lng)
+        dt_actual = (now - prev_dispatch) if (prev_dispatch is not None and now > prev_dispatch) else step_dt
+        eff_kmh = (actual_dist / dt_actual) * 3.6 if dt_actual > 0 else current_speed
+        logger.info(
+            "Nav tick [gen=%s]: (%.6f, %.6f) -> (%.6f, %.6f) | step=%.2fm | dt=%.3fs | speed=%.1f km/h (eff=%.1f km/h) | rem=%.1fm",
+            expected_generation if expected_generation is not None else "direct",
+            prev_lat,
+            prev_lng,
+            target_lat,
+            target_lng,
+            actual_dist,
+            dt_actual,
+            current_speed,
+            eff_kmh,
+            rem_dist,
+        )
+
+        success = self._dispatch(target_lat, target_lng)
+        if not success:
+            with self._lock:
+                self.current_lat = prev_lat
+                self.current_lng = prev_lng
+                self.traveled_distance_m = prev_traveled
+                self.remaining_distance_m = max(0.0, self.total_distance_m - prev_traveled)
+                self.paused = True
+            return False
+
+        if finished:
+            self._stop_event.set()
 
         return not finished
 
-    def _worker_loop(self) -> None:
+    def _worker_loop(
+        self,
+        gen_id: Optional[int] = None,
+        stop_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Background worker thread running at 1Hz (tick_interval) with strict monotonic clock
-        pacing and anti-burst protection until stopped or completed.
+        pacing, per-generation isolation, and anti-burst protection until stopped or completed.
         """
-        next_tick_time = self._clock() + self.tick_interval
-        while not self._stop_event.is_set():
+        ev = stop_event if stop_event is not None else self._stop_event
+        with self._lock:
+            now_init = self._clock()
+            if self._last_dispatch_time is not None and self._last_dispatch_time > (now_init - self.tick_interval):
+                next_tick_time = max(
+                    now_init + self.tick_interval,
+                    self._last_dispatch_time + self.tick_interval,
+                )
+            else:
+                next_tick_time = now_init + self.tick_interval
+
+        while not ev.is_set():
+            if gen_id is not None and self._worker_generation != gen_id:
+                break
+
             now = self._clock()
             sleep_time = next_tick_time - now
             if sleep_time > 0:
-                interrupted = self._stop_event.wait(timeout=sleep_time)
-                if interrupted or self._stop_event.is_set():
+                interrupted = ev.wait(timeout=sleep_time)
+                if interrupted or ev.is_set():
                     break
             else:
                 # If execution lagged, resync next_tick_time to avoid rapid catch-up bursts
                 next_tick_time = self._clock()
 
+            if gen_id is not None and self._worker_generation != gen_id:
+                break
+
             if self.paused:
                 next_tick_time = self._clock() + self.tick_interval
                 continue
 
-            active = self.step_tick(self.tick_interval)
+            active = self.step_tick(self.tick_interval, expected_generation=gen_id)
             if not active:
                 break
 
@@ -403,15 +544,21 @@ class NavigationController:
         Returns the last reported coordinate dict: {"lat": ..., "lng": ...}.
         """
         with self._lock:
+            was_active = self.active
             self.active = False
+            self._worker_generation += 1
             self._stop_event.set()
+            thread_to_join = self._thread
+            self._thread = None
             lat = self.current_lat
             lng = self.current_lng
 
-        if self._thread is not None and self._thread.is_alive():
-            if threading.current_thread() != self._thread:
-                self._thread.join(timeout=2.0)
-            self._thread = None
+        if was_active:
+            logger.info("Navigation stopped at (%.6f, %.6f)", lat, lng)
+
+        if thread_to_join is not None and thread_to_join.is_alive():
+            if threading.current_thread() != thread_to_join:
+                thread_to_join.join(timeout=2.0)
 
         return {"lat": lat, "lng": lng}
 
