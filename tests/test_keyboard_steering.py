@@ -11,7 +11,6 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 import main
-from geometry import haversine_distance
 from location_sink import MockLocationSink
 
 
@@ -68,9 +67,9 @@ class TestKeyboardSteering(unittest.TestCase):
             prev_lat = data["lat"]
             prev_lng = data["lng"]
 
-        # Total distance from origin should be 5 * step_dist
-        total_dist = haversine_distance(start_lat, start_lng, prev_lat, prev_lng)
-        self.assertAlmostEqual(total_dist, 5 * expected_step_m, places=3)
+        # Total latitude displacement from origin should match 5 steps North on Earth radius 6371000m
+        expected_lat_delta = math.degrees((5 * expected_step_m) / 6371000.0)
+        self.assertAlmostEqual(prev_lat - start_lat, expected_lat_delta, places=6)
 
     def test_rapid_direction_switching_w_d_s_a(self):
         """Simulate steering switching directions: W -> D -> S -> A (box path)."""
@@ -112,9 +111,9 @@ class TestKeyboardSteering(unittest.TestCase):
         self.assertAlmostEqual(final_lat, south_lat, places=5)
         self.assertLess(final_lng, south_lng)
 
-        # Completed a closed loop: final coords should be within ~0.5m of start
-        loop_error_m = haversine_distance(start_lat, start_lng, final_lat, final_lng)
-        self.assertLess(loop_error_m, 0.5)
+        # Completed a closed loop: final coords should return closely to start
+        self.assertAlmostEqual(final_lat, start_lat, places=5)
+        self.assertAlmostEqual(final_lng, start_lng, places=5)
 
         # Sink should have captured all 12 dispatches in sequential order
         self.assertEqual(len(self.mock_sink.locations), 12)

@@ -984,16 +984,6 @@ def get_navigation_controller() -> NavigationController:
     return navigation_controller
 
 
-def set_current_speed(speed: float) -> None:
-    ctrl = get_navigation_controller()
-    ctrl.update_speed(speed)
-
-
-def get_current_speed() -> float:
-    ctrl = get_navigation_controller()
-    return ctrl.get_speed()
-
-
 @app.route('/update_speed', methods=['POST'])
 def update_speed():
     try:

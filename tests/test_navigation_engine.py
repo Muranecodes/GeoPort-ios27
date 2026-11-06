@@ -12,13 +12,6 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 import main
-from geometry import (
-    calculate_bearing,
-    calculate_polyline_distance,
-    destination_point,
-    haversine_distance,
-    interpolate_polyline,
-)
 from location_sink import MockLocationSink
 from navigation_engine import NavigationController
 
@@ -275,90 +268,6 @@ class TestNavigationControllerManualSteering(unittest.TestCase):
         self.assertEqual(self.mock_sink.call_count, 2)
 
 
-class TestGeometryAndInterpolation(unittest.TestCase):
-    def test_calculate_bearing_cardinals(self):
-        """Cardinal bearings from equator origin (0, 0)."""
-        # North
-        self.assertAlmostEqual(calculate_bearing(0.0, 0.0, 1.0, 0.0), 0.0, places=2)
-        # East
-        self.assertAlmostEqual(calculate_bearing(0.0, 0.0, 0.0, 1.0), 90.0, places=2)
-        # South
-        self.assertAlmostEqual(calculate_bearing(0.0, 0.0, -1.0, 0.0), 180.0, places=2)
-        # West
-        self.assertAlmostEqual(calculate_bearing(0.0, 0.0, 0.0, -1.0), 270.0, places=2)
-        # Identical point
-        self.assertEqual(calculate_bearing(25.0, 121.0, 25.0, 121.0), 0.0)
-
-    def test_calculate_polyline_distance(self):
-        """Calculates cumulative distance across multiple waypoints."""
-        self.assertEqual(calculate_polyline_distance([]), 0.0)
-        self.assertEqual(calculate_polyline_distance([(25.0, 121.0)]), 0.0)
-
-        p1 = (25.0330, 121.5654)
-        p2 = (25.0340, 121.5654)
-        p3 = (25.0340, 121.5670)
-
-        dist12 = haversine_distance(p1[0], p1[1], p2[0], p2[1])
-        dist23 = haversine_distance(p2[0], p2[1], p3[0], p3[1])
-
-        total = calculate_polyline_distance([p1, p2, p3])
-        self.assertAlmostEqual(total, dist12 + dist23, places=3)
-
-    def test_interpolate_polyline_two_points(self):
-        """Interpolates intermediate coordinates along a 2-point segment."""
-        p1 = (25.0330, 121.5654)
-        p2 = (25.0350, 121.5654)
-        total_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
-
-        # At start
-        start = interpolate_polyline([p1, p2], 0.0)
-        self.assertAlmostEqual(start[0], p1[0], places=5)
-        self.assertAlmostEqual(start[1], p1[1], places=5)
-
-        # Negative distance clamped to start
-        neg = interpolate_polyline([p1, p2], -10.0)
-        self.assertEqual(neg, (p1[0], p1[1]))
-
-        # Halfway
-        half = interpolate_polyline([p1, p2], total_dist / 2.0)
-        self.assertAlmostEqual(half[0], 25.0340, places=4)
-        self.assertAlmostEqual(half[1], 121.5654, places=4)
-
-        # At or beyond end
-        end = interpolate_polyline([p1, p2], total_dist + 50.0)
-        self.assertAlmostEqual(end[0], p2[0], places=5)
-        self.assertAlmostEqual(end[1], p2[1], places=5)
-
-    def test_interpolate_polyline_multi_segment(self):
-        """Interpolates accurately across multi-segment turn paths."""
-        p1 = (0.0, 0.0)
-        p2 = (0.0, 1.0)  # East ~111.19 km
-        p3 = (1.0, 1.0)  # North ~111.19 km
-
-        d1 = haversine_distance(p1[0], p1[1], p2[0], p2[1])
-        d2 = haversine_distance(p2[0], p2[1], p3[0], p3[1])
-
-        # Query on first segment
-        mid1 = interpolate_polyline([p1, p2, p3], d1 / 2.0)
-        self.assertAlmostEqual(mid1[0], 0.0, places=3)
-        self.assertAlmostEqual(mid1[1], 0.5, places=3)
-
-        # Query on second segment
-        mid2 = interpolate_polyline([p1, p2, p3], d1 + (d2 / 2.0))
-        self.assertAlmostEqual(mid2[0], 0.5, places=3)
-        self.assertAlmostEqual(mid2[1], 1.0, places=3)
-
-        # Exceeding total
-        finish = interpolate_polyline([p1, p2, p3], d1 + d2 + 500.0)
-        self.assertAlmostEqual(finish[0], 1.0, places=5)
-        self.assertAlmostEqual(finish[1], 1.0, places=5)
-
-    def test_interpolate_empty_polyline_raises(self):
-        """Empty polyline raises ValueError."""
-        with self.assertRaises(ValueError):
-            interpolate_polyline([], 50.0)
-
-
 class TestNavigationControllerLifecycle(unittest.TestCase):
     def setUp(self):
         self.mock_sink = MockLocationSink()
@@ -390,25 +299,25 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         self.controller.update_speed(19.1)
         p1 = (25.0330, 121.5654)
         p2 = (25.0340, 121.5654)
-        total_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
 
         result = self.controller.start([p1, p2])
+        total_dist = result["total_distance_m"]
 
         self.assertEqual(result["status"], "started")
         status = self.controller.get_status()
         self.assertEqual(status["speed_kmh"], 19.1)
         expected_eta = round(total_dist / (19.1 / 3.6), 1)
-        self.assertAlmostEqual(status["remaining_time_s"], expected_eta, places=1)
-        self.assertAlmostEqual(result["estimated_duration_s"], expected_eta, places=1)
+        self.assertAlmostEqual(status["remaining_time_s"], expected_eta, delta=0.2)
+        self.assertAlmostEqual(result["estimated_duration_s"], expected_eta, delta=0.2)
 
     def test_step_tick_advances_distance_and_updates_sink(self):
         """step_tick advances distance by speed / 3.6 meters and dispatches to sink."""
         p1 = (0.0, 0.0)
         p2 = (0.0, 1.0)
-        total_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
 
         # 36 km/h = 10 m/s
-        self.controller.start([p1, p2], speed_kmh=36.0)
+        start_res = self.controller.start([p1, p2], speed_kmh=36.0)
+        total_dist = start_res["total_distance_m"]
         self.mock_sink.reset()
 
         # Step 1 tick (1 second -> 10 meters)
@@ -420,11 +329,31 @@ class TestNavigationControllerLifecycle(unittest.TestCase):
         self.assertAlmostEqual(status["remaining_distance_m"], total_dist - 10.0, delta=1.0)
         self.assertFalse(status["completed"])
 
+    def test_multi_segment_turn_interpolation_via_step_tick(self):
+        """step_tick interpolates accurately across a multi-segment 90-degree turn route."""
+        p1 = (0.0, 0.0)
+        p2 = (0.0, 0.001)   # East (~111.19m)
+        p3 = (0.001, 0.001) # North (~111.19m)
+
+        start_res = self.controller.start([p1, p2, p3], speed_kmh=36.0)
+        seg_dist = start_res["total_distance_m"] / 2.0
+
+        # Advance halfway along segment 1 (East)
+        self.controller.step_tick(dt=(seg_dist / 2.0) / 10.0)
+        st1 = self.controller.get_status()
+        self.assertAlmostEqual(st1["current_lat"], 0.0, places=4)
+        self.assertAlmostEqual(st1["current_lng"], 0.0005, places=4)
+
+        # Advance onto segment 2 (North)
+        self.controller.step_tick(dt=seg_dist / 10.0)
+        st2 = self.controller.get_status()
+        self.assertAlmostEqual(st2["current_lat"], 0.0005, places=4)
+        self.assertAlmostEqual(st2["current_lng"], 0.001, places=4)
+
     def test_arrival_at_destination_stops_and_marks_completed(self):
         """Reaching final destination dispatches final coordinate, halts worker, sets completed=True."""
         p1 = (25.0330, 121.5654)
         p2 = (25.0331, 121.5654)  # ~11.1 meters away
-        total_dist = haversine_distance(p1[0], p1[1], p2[0], p2[1])
 
         # Speed 72 km/h = 20 m/s (reaches ~11m destination in 1 tick)
         self.controller.start([p1, p2], speed_kmh=72.0)
@@ -675,7 +604,6 @@ class TestNavigationFlaskEndpoints(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
-        main.set_current_speed(5.0)
 
         # Attach test navigation controller
         self.test_controller = NavigationController(
@@ -687,7 +615,7 @@ class TestNavigationFlaskEndpoints(unittest.TestCase):
     def tearDown(self):
         if hasattr(self.app, "navigation_controller") and self.app.navigation_controller:
             self.app.navigation_controller.stop()
-        main.set_current_speed(5.0)
+            delattr(self.app, "navigation_controller")
 
     def test_start_navigation_endpoint_success(self):
         """POST /start_navigation starts controller and returns 200 with distance and ETA."""

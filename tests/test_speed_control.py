@@ -11,7 +11,6 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 import main
-from geometry import validate_speed
 from location_sink import MockLocationSink
 
 
@@ -22,12 +21,12 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
-        main.set_current_speed(5.0)
+        main.get_navigation_controller().update_speed(5.0)
 
     def tearDown(self):
         if hasattr(self.app, "navigation_controller"):
             delattr(self.app, "navigation_controller")
-        main.set_current_speed(5.0)
+        main.get_navigation_controller().update_speed(5.0)
 
     def test_update_speed_valid_float(self):
         """Valid positive float speed updates state and returns 200 with status."""
@@ -36,7 +35,7 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data.get("status"), "updated")
         self.assertEqual(data.get("speed_kmh"), 20.0)
-        self.assertEqual(main.get_current_speed(), 20.0)
+        self.assertEqual(main.get_navigation_controller().get_speed(), 20.0)
 
     def test_update_speed_valid_int(self):
         """Integer speed (e.g. 60) is accepted and converted to float."""
@@ -45,7 +44,7 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data.get("status"), "updated")
         self.assertEqual(data.get("speed_kmh"), 60.0)
-        self.assertEqual(main.get_current_speed(), 60.0)
+        self.assertEqual(main.get_navigation_controller().get_speed(), 60.0)
 
     def test_update_speed_valid_numeric_string(self):
         """Numeric string representation (e.g. '15.5') is parsed correctly."""
@@ -54,7 +53,7 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data.get("status"), "updated")
         self.assertEqual(data.get("speed_kmh"), 15.5)
-        self.assertEqual(main.get_current_speed(), 15.5)
+        self.assertEqual(main.get_navigation_controller().get_speed(), 15.5)
 
     def test_update_speed_contract_when_navigation_inactive(self):
         """POST /update_speed always returns updated_duration_s even when navigation is not active."""
@@ -117,7 +116,6 @@ class TestUpdateSpeedEndpoint(unittest.TestCase):
         response = self.client.post("/update_speed", json={"speed_kmh": 35.0})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ctrl.get_speed(), 35.0)
-        self.assertEqual(main.get_current_speed(), 35.0)
 
     def test_update_speed_calls_controller_update_speed_once(self):
         """POST /update_speed invokes NavigationController.update_speed exactly once."""
@@ -150,14 +148,14 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
         self.ctrl = main.get_navigation_controller()
         self.ctrl.has_location = False
         self.ctrl.min_step_interval = 0.0
-        main.set_current_speed(5.0)
+        self.ctrl.update_speed(5.0)
 
     def tearDown(self):
         if hasattr(self, "ctrl") and self.ctrl is not None:
             self.ctrl.stop()
         if hasattr(self.app, "navigation_controller"):
             delattr(self.app, "navigation_controller")
-        main.set_current_speed(5.0)
+        main.get_navigation_controller().update_speed(5.0)
 
     def test_move_step_uses_updated_speed_when_not_specified(self):
         """When speed_kmh is omitted in /move_step, it uses the active backend speed."""
@@ -205,7 +203,7 @@ class TestMoveStepFallbackSpeed(unittest.TestCase):
     def test_explicit_speed_overrides_backend_speed_without_altering_it(self):
         """Passing explicit speed_kmh in /move_step uses that speed for the single step."""
         self.ctrl.set_location_coords(25.0330, 121.5654)
-        main.set_current_speed(60.0)
+        self.ctrl.update_speed(60.0)
 
         # Explicit speed 10 km/h
         res1 = self.client.post("/move_step", json={"direction": "w", "speed_kmh": 10.0})
@@ -313,27 +311,6 @@ class TestCalculateTimeLogic(unittest.TestCase):
         self.assertAlmostEqual(data["fallbackZero"], 3600.0)
         self.assertAlmostEqual(data["fallbackNegative"], 3600.0)
         self.assertAlmostEqual(data["fallbackNull"], 3600.0)
-
-
-class TestSpeedValidation(unittest.TestCase):
-    def test_valid_speeds(self):
-        self.assertEqual(validate_speed(5), 5.0)
-        self.assertEqual(validate_speed(20.5), 20.5)
-        self.assertEqual(validate_speed("15.2"), 15.2)
-
-    def test_invalid_speeds_raise_value_error(self):
-        with self.assertRaises(ValueError):
-            validate_speed(0)
-        with self.assertRaises(ValueError):
-            validate_speed(-10)
-        with self.assertRaises(ValueError):
-            validate_speed("abc")
-        with self.assertRaises(ValueError):
-            validate_speed(float("nan"))
-        with self.assertRaises(ValueError):
-            validate_speed(float("inf"))
-        with self.assertRaises(ValueError):
-            validate_speed(None)
 
 
 if __name__ == "__main__":

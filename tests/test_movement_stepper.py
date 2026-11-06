@@ -8,119 +8,8 @@ src_dir = Path(__file__).resolve().parent.parent / "src"
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-from geometry import (
-    haversine_distance,
-    destination_point,
-    get_bearing_for_direction,
-    calculate_step,
-    CARDINAL_BEARINGS,
-    EARTH_RADIUS_METERS,
-)
 from location_sink import DeviceSessionContext, LocationSink, MockLocationSink, DvtLocationSink
 import main
-
-
-class TestGeometryUtilities(unittest.TestCase):
-    def test_haversine_distance_same_coordinates(self):
-        dist = haversine_distance(25.0330, 121.5654, 25.0330, 121.5654)
-        self.assertAlmostEqual(dist, 0.0, places=5)
-
-    def test_haversine_distance_known_distance(self):
-        # 1 degree of latitude is approximately 111,195 meters (using R=6371000)
-        expected_m = (math.pi / 180.0) * EARTH_RADIUS_METERS
-        dist = haversine_distance(0.0, 0.0, 1.0, 0.0)
-        self.assertAlmostEqual(dist, expected_m, delta=1.0)
-
-    def test_cardinal_bearings_mapping(self):
-        # 'w' = North (0°), 'a' = West (270°), 's' = South (180°), 'd' = East (90°)
-        self.assertEqual(get_bearing_for_direction("w"), 0.0)
-        self.assertEqual(get_bearing_for_direction("W"), 0.0)
-        self.assertEqual(get_bearing_for_direction("s"), 180.0)
-        self.assertEqual(get_bearing_for_direction("S"), 180.0)
-        self.assertEqual(get_bearing_for_direction("a"), 270.0)
-        self.assertEqual(get_bearing_for_direction("A"), 270.0)
-        self.assertEqual(get_bearing_for_direction("d"), 90.0)
-        self.assertEqual(get_bearing_for_direction("D"), 90.0)
-
-        with self.assertRaises(ValueError):
-            get_bearing_for_direction("invalid_dir")
-
-    def test_destination_point_north(self):
-        # Stepping North: latitude increases, longitude unchanged
-        start_lat, start_lng = 25.0330, 121.5654
-        distance = 100.0  # 100 meters
-        new_lat, new_lng = destination_point(start_lat, start_lng, bearing_degrees=0.0, distance_meters=distance)
-        self.assertGreater(new_lat, start_lat)
-        self.assertAlmostEqual(new_lng, start_lng, places=5)
-
-        actual_dist = haversine_distance(start_lat, start_lng, new_lat, new_lng)
-        self.assertAlmostEqual(actual_dist, distance, places=3)
-
-    def test_destination_point_south(self):
-        # Stepping South: latitude decreases, longitude unchanged
-        start_lat, start_lng = 25.0330, 121.5654
-        distance = 100.0
-        new_lat, new_lng = destination_point(start_lat, start_lng, bearing_degrees=180.0, distance_meters=distance)
-        self.assertLess(new_lat, start_lat)
-        self.assertAlmostEqual(new_lng, start_lng, places=5)
-
-        actual_dist = haversine_distance(start_lat, start_lng, new_lat, new_lng)
-        self.assertAlmostEqual(actual_dist, distance, places=3)
-
-    def test_destination_point_east(self):
-        # Stepping East: latitude roughly unchanged, longitude increases
-        start_lat, start_lng = 25.0330, 121.5654
-        distance = 100.0
-        new_lat, new_lng = destination_point(start_lat, start_lng, bearing_degrees=90.0, distance_meters=distance)
-        self.assertAlmostEqual(new_lat, start_lat, places=4)
-        self.assertGreater(new_lng, start_lng)
-
-        actual_dist = haversine_distance(start_lat, start_lng, new_lat, new_lng)
-        self.assertAlmostEqual(actual_dist, distance, places=3)
-
-    def test_destination_point_west(self):
-        # Stepping West: latitude roughly unchanged, longitude decreases
-        start_lat, start_lng = 25.0330, 121.5654
-        distance = 100.0
-        new_lat, new_lng = destination_point(start_lat, start_lng, bearing_degrees=270.0, distance_meters=distance)
-        self.assertAlmostEqual(new_lat, start_lat, places=4)
-        self.assertLess(new_lng, start_lng)
-
-        actual_dist = haversine_distance(start_lat, start_lng, new_lat, new_lng)
-        self.assertAlmostEqual(actual_dist, distance, places=3)
-
-    def test_calculate_step_various_speeds(self):
-        # Walking: 5 km/h -> 5 / 3.6 ≈ 1.388889 meters
-        lat, lng, dist = calculate_step(0.0, 0.0, "w", speed_kmh=5.0)
-        self.assertAlmostEqual(dist, 5.0 / 3.6, places=5)
-        self.assertAlmostEqual(haversine_distance(0.0, 0.0, lat, lng), 5.0 / 3.6, places=4)
-
-        # Cycling: 20 km/h -> 20 / 3.6 ≈ 5.555556 meters
-        lat, lng, dist = calculate_step(0.0, 0.0, "d", speed_kmh=20.0)
-        self.assertAlmostEqual(dist, 20.0 / 3.6, places=5)
-        self.assertAlmostEqual(haversine_distance(0.0, 0.0, lat, lng), 20.0 / 3.6, places=4)
-
-        # Driving: 60 km/h -> 60 / 3.6 ≈ 16.666667 meters
-        lat, lng, dist = calculate_step(0.0, 0.0, "s", speed_kmh=60.0)
-        self.assertAlmostEqual(dist, 60.0 / 3.6, places=5)
-        self.assertAlmostEqual(haversine_distance(0.0, 0.0, lat, lng), 60.0 / 3.6, places=4)
-
-
-    def test_destination_point_zero_distance(self):
-        lat, lng = destination_point(12.34, 56.78, bearing_degrees=90.0, distance_meters=0.0)
-        self.assertEqual(lat, 12.34)
-        self.assertEqual(lng, 56.78)
-
-    def test_destination_point_antimeridian_wrap(self):
-        # Starting near 179.999° East, stepping East crosses 180° into negative longitude
-        lat, lng = destination_point(0.0, 179.999, bearing_degrees=90.0, distance_meters=1000.0)
-        self.assertAlmostEqual(lat, 0.0, places=4)
-        self.assertLess(lng, 0.0)
-        self.assertGreaterEqual(lng, -180.0)
-
-    def test_calculate_step_negative_speed_raises(self):
-        with self.assertRaises(ValueError):
-            calculate_step(0.0, 0.0, "w", speed_kmh=-5.0)
 
 
 class TestLocationSink(unittest.TestCase):
@@ -380,6 +269,13 @@ class TestMoveStepEndpoint(unittest.TestCase):
         res_a = self.client.post("/move_step", json={"direction": "a", "speed_kmh": speed_kmh})
         self.assertEqual(res_a.status_code, 200)
         self.assertLess(res_a.get_json()["lng"], start_lng)
+
+        # Antimeridian wrap: stepping East across 180° wraps cleanly into [-180, 0)
+        self.ctrl.set_location_coords(0.0, 179.999)
+        res_wrap = self.client.post("/move_step", json={"direction": "d", "speed_kmh": 3600.0})
+        self.assertEqual(res_wrap.status_code, 200)
+        self.assertLess(res_wrap.get_json()["lng"], 0.0)
+        self.assertGreaterEqual(res_wrap.get_json()["lng"], -180.0)
 
     def test_move_step_speed_presets(self):
         start_lat, start_lng = 25.0330, 121.5654

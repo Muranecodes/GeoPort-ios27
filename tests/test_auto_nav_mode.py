@@ -11,7 +11,6 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 import main
-from geometry import haversine_distance
 from location_sink import MockLocationSink
 from navigation_engine import NavigationController
 
@@ -439,13 +438,13 @@ class TestAutoNavLifecycleIntegration(unittest.TestCase):
         self.client = self.app.test_client()
         self.mock_sink = MockLocationSink()
         main.set_location_sink(self.mock_sink)
-        main.set_current_speed(5.0)
+        main.get_navigation_controller().update_speed(5.0)
 
     def tearDown(self):
         if hasattr(self.app, "navigation_controller"):
             self.app.navigation_controller.stop()
             delattr(self.app, "navigation_controller")
-        main.set_current_speed(5.0)
+        main.get_navigation_controller().update_speed(5.0)
 
     def test_start_navigation_with_waypoints_and_polling(self):
         """Full lifecycle: start navigation, poll status, and verify active worker."""
@@ -494,7 +493,6 @@ class TestAutoNavLifecycleIntegration(unittest.TestCase):
         end_pt = (25.0332, 121.5654)  # ~22.2 meters away
 
         waypoints = [start_pt, end_pt]
-        total_dist = haversine_distance(start_pt[0], start_pt[1], end_pt[0], end_pt[1])
 
         # Step at 100 km/h (~27.7 m/s) -> completes in 1 step
         controller = NavigationController(
