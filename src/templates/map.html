@@ -2520,9 +2520,16 @@ function setCoordinates(lat, lng, syncServer = true) {
     if (typeof window !== 'undefined') {
         window.lastDispatchedMoveCoords = { lat: Number(lat), lng: Number(lng) };
     }
-    document.getElementById('coordinates').value = lat + ', ' + lng;
-    updateSetLocationButtonStatus();
-    updateStopLocationButtonStatus(); // Add this line to update the Stop Location button status
+    const coordInput = document.getElementById('coordinates');
+    if (coordInput) {
+        coordInput.value = lat + ', ' + lng;
+    }
+    if (typeof updateSetLocationButtonStatus === 'function') {
+        updateSetLocationButtonStatus();
+    }
+    if (typeof updateStopLocationButtonStatus === 'function') {
+        updateStopLocationButtonStatus();
+    }
     if (!syncServer) return;
     fetch('/update_location', {
         method: 'POST',
@@ -2535,6 +2542,7 @@ function setCoordinates(lat, lng, syncServer = true) {
         .then(data => console.log(data))
         .catch(error => console.error('Error updating location:', error));
 }
+window.setCoordinates = setCoordinates;
 
 // Function to handle search
 function handleSearch() {
@@ -2953,6 +2961,7 @@ function resetPlaybackFlag() {
 
 //============== Keyboard WASD Steering =============================
 
+/* === GEOPORT_WORKBENCH_MODULE_START === */
 // Active key state tracking
 const pressedKeyDirections = new Map(); // keyIdentifier -> direction ('w', 'a', 's', 'd')
 let activeMovementInterval = null;
@@ -3073,9 +3082,9 @@ function initSpeedControl() {
     setSpeed(initialSpeed, true);
 }
 
-if (document.readyState === 'loading') {
+if (typeof document !== 'undefined' && document.readyState === 'loading' && typeof document.addEventListener === 'function') {
     document.addEventListener('DOMContentLoaded', initSpeedControl);
-} else {
+} else if (typeof document !== 'undefined' && typeof document.getElementById === 'function' && typeof localStorage !== 'undefined') {
     initSpeedControl();
 }
 
@@ -3087,30 +3096,6 @@ function getCurrentSpeed() {
     const speedNumInput = document.getElementById('speedNumberInput');
     if (speedNumInput && speedNumInput.value && !isNaN(parseFloat(speedNumInput.value)) && parseFloat(speedNumInput.value) > 0) {
         return parseFloat(speedNumInput.value);
-    }
-    const speedInput = document.getElementById('speedInput');
-    if (speedInput && speedInput.value && !isNaN(parseFloat(speedInput.value)) && parseFloat(speedInput.value) > 0) {
-        return parseFloat(speedInput.value);
-    }
-    const customSpeedInput = document.getElementById('customSpeedInput');
-    if (customSpeedInput && customSpeedInput.value && !isNaN(parseFloat(customSpeedInput.value)) && parseFloat(customSpeedInput.value) > 0) {
-        return parseFloat(customSpeedInput.value);
-    }
-    if (typeof velocitySelect !== 'undefined' && velocitySelect !== null) {
-        const parsed = parseFloat(velocitySelect);
-        if (!isNaN(parsed) && parsed > 0) {
-            return parsed;
-        }
-        const speedPresets = {
-            'walk': 5.0,
-            'run': 12.0,
-            'ride': 20.0,
-            'bike': 20.0,
-            'drive': 60.0
-        };
-        if (typeof speedPresets[velocitySelect] === 'number') {
-            return speedPresets[velocitySelect];
-        }
     }
     return 5.0;
 }
@@ -3262,6 +3247,7 @@ function stopNavigationStatusPolling() {
 }
 
 function stopNavigation() {
+    stopNavigationStatusPolling();
     clearNavRoute();
     return fetch('/stop_navigation', {
         method: 'POST',
@@ -3372,7 +3358,7 @@ window.isCameraLocked = true;
 window.navRoutePolyline = null;
 
 function getCoordinates() {
-    if (marker && typeof marker.getLatLng === 'function') {
+    if (typeof marker !== 'undefined' && marker && typeof marker.getLatLng === 'function') {
         const curLatLng = marker.getLatLng();
         if (curLatLng && !isNaN(curLatLng.lat) && !isNaN(curLatLng.lng)) {
             return { lat: curLatLng.lat, lng: curLatLng.lng };
@@ -3389,11 +3375,15 @@ function getCoordinates() {
             }
         }
     }
-    if (typeof map !== 'undefined' && map && typeof map.getCenter === 'function') {
-        const center = map.getCenter();
-        if (center && !isNaN(center.lat) && !isNaN(center.lng)) {
-            return { lat: center.lat, lng: center.lng };
-        }
+    if (typeof window !== 'undefined' && window.lastDispatchedMoveCoords &&
+        typeof window.lastDispatchedMoveCoords.lat === 'number' &&
+        typeof window.lastDispatchedMoveCoords.lng === 'number' &&
+        !isNaN(window.lastDispatchedMoveCoords.lat) &&
+        !isNaN(window.lastDispatchedMoveCoords.lng)) {
+        return {
+            lat: window.lastDispatchedMoveCoords.lat,
+            lng: window.lastDispatchedMoveCoords.lng
+        };
     }
     return null;
 }
@@ -3545,7 +3535,7 @@ async function handleAutoNavMapClick(e) {
     const startCoords = getCoordinates();
     if (!startCoords || typeof startCoords.lat !== 'number' || typeof startCoords.lng !== 'number' || isNaN(startCoords.lat) || isNaN(startCoords.lng)) {
         if (typeof displayToast === 'function') {
-            displayToast("請先在地圖上設定當前位置或連線設備");
+            displayToast(typeof t === 'function' ? t('toast.set_location_first', "請先在地圖上設定當前位置或連線設備") : "請先在地圖上設定當前位置或連線設備");
         }
         return;
     }
@@ -3570,18 +3560,15 @@ async function handleAutoNavMapClick(e) {
         const startLat = latestStart.lat;
         const startLng = latestStart.lng;
 
-        if (!marker && typeof createMarker === 'function') {
+        if ((typeof marker === 'undefined' || !marker) && typeof createMarker === 'function') {
             marker = createMarker([startLat, startLng]);
-        } else if (!marker && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
+        } else if ((typeof marker === 'undefined' || !marker) && typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
             marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
         }
 
         const rawRouteCoords = await fetchOsrmRoute(startLat, startLng, destLat, destLng);
         const routeCoords = (rawRouteCoords && Array.isArray(rawRouteCoords)) ? rawRouteCoords.slice() : [];
 
-        // Ensure smooth initial start transition:
-        // If OSRM snapped the first waypoint away from user's current exact location,
-        // prepend [startLat, startLng] so there is zero initial teleport jump.
         if (routeCoords.length >= 2) {
             const first = routeCoords[0];
             if (Math.abs(startLat - first[0]) > 0.00002 || Math.abs(startLng - first[1]) > 0.00002) {
@@ -3616,7 +3603,7 @@ window.handleAutoNavMapClick = handleAutoNavMapClick;
 
 // Helper to check if an element or activeElement is interactive
 function isInteractiveElement(target) {
-    const el = target || document.activeElement;
+    const el = target || (typeof document !== 'undefined' ? document.activeElement : null);
     if (!el) return false;
     const tagName = (el.tagName || '').toUpperCase();
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)) return true;
@@ -3672,7 +3659,8 @@ function performMoveStep(dir) {
     // If coordinates are available, provide lat/lng as fallback in case server location is unset
     let baseCoords = window.lastDispatchedMoveCoords;
     if (!baseCoords && typeof getCoordinates === 'function') {
-        baseCoords = getCoordinates();
+        const coords = getCoordinates();
+        baseCoords = coords;
     }
     if (baseCoords && typeof baseCoords.lat === 'number' && typeof baseCoords.lng === 'number' && !isNaN(baseCoords.lat) && !isNaN(baseCoords.lng)) {
         payload.lat = baseCoords.lat;
@@ -3696,7 +3684,6 @@ function performMoveStep(dir) {
     })
     .then(data => {
         if (data && typeof data.lat === 'number' && typeof data.lng === 'number') {
-            window.lastDispatchedMoveCoords = { lat: data.lat, lng: data.lng };
             updatePositionOnStep(data.lat, data.lng);
         }
     })
@@ -3715,12 +3702,10 @@ function performMoveStep(dir) {
     });
 }
 
-// Update the marker, input fields, and state when step coordinates are received
+// Update the marker, camera tracking, and authoritative coordinate state when step coordinates are received
 function updatePositionOnStep(lat, lng) {
-    window.lastDispatchedMoveCoords = { lat: lat, lng: lng };
-
     // 1. Update marker on Leaflet map smoothly or create marker if none exists
-    if (!marker || (typeof map !== 'undefined' && map && !map.hasLayer(marker))) {
+    if (typeof marker === 'undefined' || !marker || (typeof map !== 'undefined' && map && !map.hasLayer(marker))) {
         if (typeof createMarker === 'function') {
             marker = createMarker([lat, lng]);
         } else if (typeof L !== 'undefined' && typeof map !== 'undefined' && map) {
@@ -3730,70 +3715,24 @@ function updatePositionOnStep(lat, lng) {
         marker.setLatLng([lat, lng]);
     }
 
-    // 2. Camera auto-centering if camera is locked
+    // 2. Camera Tracking auto-centering if camera is locked
     if (window.isCameraLocked && typeof map !== 'undefined' && map && typeof map.panTo === 'function') {
         map.panTo([lat, lng]);
     }
 
-    // 3. Update #coordinates text input
-    const coordInput = document.getElementById('coordinates');
-    if (coordInput) {
-        coordInput.value = lat + ', ' + lng;
-    }
-
-    // 3. Update button statuses and setCoordinates state
-    if (typeof updateSetLocationButtonStatus === 'function') {
-        updateSetLocationButtonStatus();
-    }
-    if (typeof updateStopLocationButtonStatus === 'function') {
-        updateStopLocationButtonStatus();
-    }
+    // 3. Synchronize authoritative coordinate state, #coordinates input, and button statuses once via setCoordinates
     if (typeof setCoordinates === 'function') {
         setCoordinates(lat, lng, false);
+    } else {
+        window.lastDispatchedMoveCoords = { lat: Number(lat), lng: Number(lng) };
+        const coordInput = document.getElementById('coordinates');
+        if (coordInput) {
+            coordInput.value = lat + ', ' + lng;
+        }
     }
 }
 
-// Keydown handler
-function handleKeyDown(event) {
-    if (event.ctrlKey || event.altKey || event.metaKey) {
-        return;
-    }
-    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
-        return;
-    }
-
-    const dir = getDirectionFromEvent(event);
-    if (!dir) {
-        return;
-    }
-
-    // Prevent default scrolling on arrow keys or directional controls
-    event.preventDefault();
-
-    const keyId = event.code || event.key;
-    if (pressedKeyDirections.has(keyId) || event.repeat) {
-        return;
-    }
-
-    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, route line is cleared, and UI displays a toast ("自動導航已中斷，切換為手動操作").
-    if (window.isNavigating || window.navPollInterval !== null) {
-        if (typeof stopNavigation === 'function') {
-            stopNavigation();
-        } else {
-            stopNavigationStatusPolling();
-            if (typeof clearNavRoute === 'function') {
-                clearNavRoute();
-            }
-        }
-        if (typeof displayToast === 'function') {
-            displayToast("自動導航已中斷，切換為手動操作");
-        }
-    }
-
-    pressedKeyDirections.set(keyId, dir);
-    activeDirection = dir;
-
-    // Reset any existing ticker interval / timeout
+function clearSteeringTimers() {
     if (typeof window !== 'undefined' && window.activeMovementTimeout) {
         clearTimeout(window.activeMovementTimeout);
         window.activeMovementTimeout = null;
@@ -3802,7 +3741,17 @@ function handleKeyDown(event) {
         clearInterval(activeMovementInterval);
         activeMovementInterval = null;
     }
+}
 
+// Unified 1Hz monotonic anti-burst steering scheduler (ADR-0001) shared by handleKeyDown and handleKeyUp
+function scheduleSteeringTicker(dir) {
+    clearSteeringTimers();
+    if (!dir) {
+        activeDirection = null;
+        return;
+    }
+
+    activeDirection = dir;
     const now = Date.now();
     const elapsed = now - (window.lastMoveStepTime || 0);
 
@@ -3835,9 +3784,50 @@ function handleKeyDown(event) {
     }
 }
 
+// Keydown handler
+function handleKeyDown(event) {
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+    }
+    if (isInteractiveElement(event.target) || isInteractiveElement(typeof document !== 'undefined' ? document.activeElement : null)) {
+        return;
+    }
+
+    const dir = getDirectionFromEvent(event);
+    if (!dir) {
+        return;
+    }
+
+    // Prevent default scrolling on arrow keys or directional controls
+    event.preventDefault();
+
+    const keyId = event.code || event.key;
+    if (pressedKeyDirections.has(keyId) || event.repeat) {
+        return;
+    }
+
+    // When user presses W/A/S/D or arrow keys while navigation is active: HUD hides, navigation status stops, route line is cleared, and UI displays a toast.
+    if (window.isNavigating || window.navPollInterval !== null) {
+        if (typeof stopNavigation === 'function') {
+            stopNavigation();
+        } else {
+            stopNavigationStatusPolling();
+            if (typeof clearNavRoute === 'function') {
+                clearNavRoute();
+            }
+        }
+        if (typeof displayToast === 'function') {
+            displayToast(typeof t === 'function' ? t('toast.auto_nav_interrupted', "自動導航已中斷，切換為手動操作") : "自動導航已中斷，切換為手動操作");
+        }
+    }
+
+    pressedKeyDirections.set(keyId, dir);
+    scheduleSteeringTicker(dir);
+}
+
 // Keyup handler
 function handleKeyUp(event) {
-    if (isInteractiveElement(event.target) || isInteractiveElement(document.activeElement)) {
+    if (isInteractiveElement(event.target) || isInteractiveElement(typeof document !== 'undefined' ? document.activeElement : null)) {
         return;
     }
 
@@ -3849,61 +3839,13 @@ function handleKeyUp(event) {
     const keyId = event.code || event.key;
     pressedKeyDirections.delete(keyId);
 
-    // Clear active interval and timeout immediately upon release
-    if (typeof window !== 'undefined' && window.activeMovementTimeout) {
-        clearTimeout(window.activeMovementTimeout);
-        window.activeMovementTimeout = null;
-    }
-    if (activeMovementInterval) {
-        clearInterval(activeMovementInterval);
-        activeMovementInterval = null;
-    }
-
     const nextDir = getActiveDirection();
-    if (nextDir) {
-        activeDirection = nextDir;
-        const now = Date.now();
-        const elapsed = now - (window.lastMoveStepTime || 0);
-        if (elapsed >= 950) {
-            window.lastMoveStepTime = now;
-            performMoveStep(nextDir);
-            activeMovementInterval = setInterval(function() {
-                if (activeDirection) {
-                    window.lastMoveStepTime = Date.now();
-                    performMoveStep(activeDirection);
-                }
-            }, 1000);
-        } else {
-            const remainingDelay = Math.max(50, 1000 - elapsed);
-            window.activeMovementTimeout = setTimeout(function() {
-                window.activeMovementTimeout = null;
-                if (activeDirection) {
-                    window.lastMoveStepTime = Date.now();
-                    performMoveStep(activeDirection);
-                    activeMovementInterval = setInterval(function() {
-                        if (activeDirection) {
-                            window.lastMoveStepTime = Date.now();
-                            performMoveStep(activeDirection);
-                        }
-                    }, 1000);
-                }
-            }, remainingDelay);
-        }
-    } else {
-        activeDirection = null;
-    }
+    scheduleSteeringTicker(nextDir);
 }
 
 // Function to immediately stop stepping on blur or navigation cancel
 function stopKeyboardSteering() {
-    if (typeof window !== 'undefined' && window.activeMovementTimeout) {
-        clearTimeout(window.activeMovementTimeout);
-        window.activeMovementTimeout = null;
-    }
-    if (activeMovementInterval) {
-        clearInterval(activeMovementInterval);
-        activeMovementInterval = null;
-    }
+    clearSteeringTimers();
     activeDirection = null;
     pendingMoveStepDir = null;
     pressedKeyDirections.clear();
@@ -3912,6 +3854,45 @@ window.stopKeyboardSteering = stopKeyboardSteering;
 window.handleKeyDown = handleKeyDown;
 window.handleKeyUp = handleKeyUp;
 window.performMoveStep = performMoveStep;
+window.scheduleSteeringTicker = scheduleSteeringTicker;
+
+window.GeoPortWorkbench = {
+    syncSpeedControls,
+    setSpeed,
+    getCurrentSpeed,
+    formatNavDistance,
+    formatNavTime,
+    updateNavHud,
+    fetchNavigationStatus,
+    startNavigationStatusPolling,
+    stopNavigationStatusPolling,
+    startNavigation,
+    stopNavigation,
+    toggleNavPause,
+    getCoordinates,
+    toggleAutoNavMode,
+    setCameraLock,
+    toggleCameraLock,
+    buildOsrmFootRouteUrl,
+    parseOsrmRouteGeometry,
+    getFallbackRoute,
+    fetchOsrmRoute,
+    clearNavRoute,
+    handleAutoNavMapClick,
+    isInteractiveElement,
+    getDirectionFromEvent,
+    getActiveDirection,
+    performMoveStep,
+    updatePositionOnStep,
+    scheduleSteeringTicker,
+    handleKeyDown,
+    handleKeyUp,
+    stopKeyboardSteering
+};
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = window.GeoPortWorkbench;
+}
+/* === GEOPORT_WORKBENCH_MODULE_END === */
 
 
 

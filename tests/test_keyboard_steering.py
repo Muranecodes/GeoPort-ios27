@@ -200,48 +200,46 @@ class TestKeyboardSteering(unittest.TestCase):
         self.assertIn("return 5.0", content)
 
     def test_wasd_interruption_clears_nav_route(self):
-        """When keyboard WASD interrupts active navigation, clearNavRoute is invoked."""
+        """When keyboard WASD interrupts active navigation, clearNavRoute and stopNavigation are invoked via GeoPortWorkbench."""
         js_code = """
         const fs = require('fs');
         const content = fs.readFileSync(process.argv[1], 'utf-8');
 
         global.window = global;
         global.document = {
+            readyState: 'loading',
+            addEventListener: function() {},
             activeElement: null,
             getElementById: function() { return null; }
         };
-        global.isNavigating = true;
-        global.navPollInterval = 123;
-        global.pressedKeyDirections = new Map();
-        global.activeMovementInterval = null;
-        global.activeDirection = null;
         global.displayToast = function() {};
-
-        let cleared = false;
-        global.clearNavRoute = function() {
-            cleared = true;
+        global.fetch = function() {
+            return Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({ status: 'stopped' })
+            });
         };
-        global.stopNavigationStatusPolling = function() {
-            global.isNavigating = false;
-            global.navPollInterval = null;
-        };
-        global.performMoveStep = function() {};
 
-        eval(content.match(/function isInteractiveElement[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/function getDirectionFromEvent[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/function handleKeyDown[\\s\\S]*?\\n\\}/)[0]);
+        const modMatch = content.match(/\\/\\* === GEOPORT_WORKBENCH_MODULE_START === \\*\\/([\\s\\S]*?)\\/\\* === GEOPORT_WORKBENCH_MODULE_END === \\*\\//);
+        if (!modMatch) throw new Error('GeoPortWorkbench module seam not found');
+        eval(modMatch[1]);
 
-        handleKeyDown({
+        window.isNavigating = true;
+        window.navPollInterval = setInterval(function() {}, 10000);
+        window.navRoutePolyline = { dummy: true };
+
+        GeoPortWorkbench.handleKeyDown({
             code: 'KeyW',
             key: 'w',
             preventDefault: function() {}
         });
 
-        if (global.activeMovementInterval) {
-            clearInterval(global.activeMovementInterval);
-        }
+        GeoPortWorkbench.stopKeyboardSteering();
 
-        console.log(JSON.stringify({ cleared: cleared, isNavigating: global.isNavigating }));
+        console.log(JSON.stringify({
+            cleared: window.navRoutePolyline === null,
+            isNavigating: window.isNavigating
+        }));
         """
         template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
         result = subprocess.run(

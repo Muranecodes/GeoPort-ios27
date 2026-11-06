@@ -24,15 +24,20 @@ class TestOsrmRoutingMathAndParsing(unittest.TestCase):
         cls.html_content = template_path.read_text(encoding="utf-8")
 
     def _eval_js(self, js_snippet):
-        """Helper to evaluate JS snippet with extracted template functions in Node.js."""
+        """Helper to evaluate JS snippet against the GeoPortWorkbench module in Node.js."""
         runner_script = f"""
         const fs = require('fs');
         const content = fs.readFileSync(process.argv[1], 'utf-8');
 
-        // Extract functions
-        eval(content.match(/function buildOsrmFootRouteUrl[\\s\\S]*?\\n\\}}/)[0]);
-        eval(content.match(/function parseOsrmRouteGeometry[\\s\\S]*?\\n\\}}/)[0]);
-        eval(content.match(/function getFallbackRoute[\\s\\S]*?\\n\\}}/)[0]);
+        global.window = global;
+        global.document = {{
+            readyState: 'loading',
+            addEventListener: function() {{}},
+            getElementById: function() {{ return null; }}
+        }};
+        const modMatch = content.match(/\\/\\* === GEOPORT_WORKBENCH_MODULE_START === \\*\\/([\\s\\S]*?)\\/\\* === GEOPORT_WORKBENCH_MODULE_END === \\*\\//);
+        if (!modMatch) throw new Error('GeoPortWorkbench module seam not found');
+        eval(modMatch[1]);
 
         {js_snippet}
         """
@@ -120,11 +125,14 @@ class TestOsrmRoutingMathAndParsing(unittest.TestCase):
         const content = fs.readFileSync(process.argv[1], 'utf-8');
 
         global.window = global;
-        eval(content.match(/function buildOsrmFootRouteUrl[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/function parseOsrmRouteGeometry[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/function getFallbackRoute[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/const osrmRouteCache = new Map\\(\\);\\s*window\\.osrmRouteCache = osrmRouteCache;/)[0]);
-        eval(content.match(/async function fetchOsrmRoute[\\s\\S]*?\\n\\}/)[0]);
+        global.document = {
+            readyState: 'loading',
+            addEventListener: function() {},
+            getElementById: function() { return null; }
+        };
+        const modMatch = content.match(/\\/\\* === GEOPORT_WORKBENCH_MODULE_START === \\*\\/([\\s\\S]*?)\\/\\* === GEOPORT_WORKBENCH_MODULE_END === \\*\\//);
+        if (!modMatch) throw new Error('GeoPortWorkbench module seam not found');
+        eval(modMatch[1]);
 
         (async () => {
             let fetchCount = 0;
@@ -191,14 +199,17 @@ class TestCameraLockAndStateToggling(unittest.TestCase):
         const fs = require('fs');
         const content = fs.readFileSync(process.argv[1], 'utf-8');
 
-        // Mock browser DOM & window environment
         global.window = global;
         global.document = {{
+            readyState: 'loading',
+            addEventListener: function() {{}},
             getElementById: function(id) {{
+                if (id === 'coordinates') return {{ value: '' }};
                 return {{
                     classList: {{
                         add: function(cls) {{}},
-                        remove: function(cls) {{}}
+                        remove: function(cls) {{}},
+                        toggle: function(cls) {{}}
                     }},
                     style: {{ cursor: '' }},
                     title: ''
@@ -208,13 +219,9 @@ class TestCameraLockAndStateToggling(unittest.TestCase):
         global.displayToast = function(msg) {{}};
         global.marker = null;
 
-        // Extract state variables and toggle functions
-        eval(content.match(/window\\.isAutoNavMode\\s*=\\s*false;/)[0]);
-        eval(content.match(/window\\.isCameraLocked\\s*=\\s*true;/)[0]);
-        eval(content.match(/function toggleAutoNavMode[\\s\\S]*?\\n\\}}/)[0]);
-        eval(content.match(/function setCameraLock[\\s\\S]*?\\n\\}}/)[0]);
-        eval(content.match(/function toggleCameraLock[\\s\\S]*?\\n\\}}/)[0]);
-        eval(content.match(/function getCoordinates[\\s\\S]*?\\n\\}}/)[0]);
+        const modMatch = content.match(/\\/\\* === GEOPORT_WORKBENCH_MODULE_START === \\*\\/([\\s\\S]*?)\\/\\* === GEOPORT_WORKBENCH_MODULE_END === \\*\\//);
+        if (!modMatch) throw new Error('GeoPortWorkbench module seam not found');
+        eval(modMatch[1]);
 
         {js_snippet}
         """
@@ -226,6 +233,29 @@ class TestCameraLockAndStateToggling(unittest.TestCase):
             check=True
         )
         return json.loads(result.stdout)
+
+    def test_get_coordinates_returns_null_when_uninitialized_even_if_map_exists(self):
+        """getCoordinates does not leak map.getCenter() when no location has been set."""
+        js = """
+        global.map = {
+            getCenter: () => ({ lat: 25.0330, lng: 121.5654 }),
+            getContainer: () => ({ style: {} })
+        };
+        const uninitialized = GeoPortWorkbench.getCoordinates();
+        let toasts = [];
+        global.displayToast = (msg) => toasts.push(msg);
+        GeoPortWorkbench.toggleAutoNavMode(true, true);
+        GeoPortWorkbench.handleAutoNavMapClick({ latlng: { lat: 25.04, lng: 121.57 } });
+        console.log(JSON.stringify({
+            uninitialized: uninitialized,
+            toastCount: toasts.length,
+            stillInAutoNavMode: window.isAutoNavMode
+        }));
+        """
+        data = self._eval_state_js(js)
+        self.assertIsNone(data["uninitialized"])
+        self.assertEqual(data["toastCount"], 1)
+        self.assertTrue(data["stillInAutoNavMode"])
 
     def test_camera_lock_initial_and_toggling(self):
         """Camera lock starts locked (true), toggles to unlocked (false), and back to locked."""
@@ -332,6 +362,8 @@ class TestMapTemplateAutoNavVerification(unittest.TestCase):
 
         global.window = global;
         global.document = {
+            readyState: 'loading',
+            addEventListener: function() {},
             getElementById: function() {
                 return {
                     classList: { add: function() {}, remove: function() {} },
@@ -344,26 +376,22 @@ class TestMapTemplateAutoNavVerification(unittest.TestCase):
         global.marker = {
             getLatLng: () => ({ lat: 25.0330, lng: 121.5654 })
         };
-        global.getCoordinates = () => ({ lat: 25.0330, lng: 121.5654 });
-        global.getCurrentSpeed = () => 9.6;
-        global.clearNavRoute = function() {};
-        global.isNavigating = false;
+
+        const modMatch = content.match(/\\/\\* === GEOPORT_WORKBENCH_MODULE_START === \\*\\/([\\s\\S]*?)\\/\\* === GEOPORT_WORKBENCH_MODULE_END === \\*\\//);
+        if (!modMatch) throw new Error('GeoPortWorkbench module seam not found');
+        eval(modMatch[1]);
 
         let osrmCalls = 0;
         let startNavCalls = 0;
-        global.fetchOsrmRoute = async function(sLat, sLng, dLat, dLng) {
+        fetchOsrmRoute = async function(sLat, sLng, dLat, dLng) {
             osrmCalls++;
             await new Promise(r => setTimeout(r, 50));
             return [[sLat, sLng], [dLat, dLng]];
         };
-        global.startNavigation = async function(waypoints, speed) {
+        startNavigation = async function(waypoints, speed) {
             startNavCalls++;
             return { status: 'started' };
         };
-
-        eval(content.match(/window\\.isAutoNavMode\\s*=\\s*false;/)[0]);
-        eval(content.match(/function toggleAutoNavMode[\\s\\S]*?\\n\\}/)[0]);
-        eval(content.match(/window\\.isAutoNavRoutingInFlight\\s*=\\s*false;[\\s\\S]*?async function handleAutoNavMapClick[\\s\\S]*?\\n\\}/)[0]);
 
         (async () => {
             toggleAutoNavMode(true, true);
