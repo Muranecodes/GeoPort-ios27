@@ -1,4 +1,6 @@
+import json
 import re
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -170,6 +172,324 @@ class TestBentoThemeLocalization(unittest.TestCase):
         for s in compat_strings:
             with self.subTest(substr=s):
                 self.assertIn(s, self.content)
+
+
+class TestBilingualSwitching(unittest.TestCase):
+    """Test suite for Chinese/English (zh-TW / en) language switching, auto-detection, live state reactivity, and backend message translation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.template_path = Path(__file__).resolve().parent.parent / "src" / "templates" / "map.html"
+        cls.content = cls.template_path.read_text(encoding="utf-8")
+
+    def _eval_i18n_js(self, js_snippet):
+        runner_script = f"""
+        const fs = require('fs');
+        const content = fs.readFileSync(process.argv[1], 'utf-8');
+
+        const i18nMatch = content.match(/\\/\\/============================ i18n Localization \\(zh-TW \\/ en\\) ======================[\\s\\S]*?window\\.isDeviceConnected = isDeviceConnected;/);
+        if (!i18nMatch) {{
+            console.error("i18n block not found");
+            process.exit(1);
+        }}
+
+        global.window = global;
+        const storage = new Map();
+        global.localStorage = {{
+            getItem: (k) => storage.has(k) ? storage.get(k) : null,
+            setItem: (k, v) => storage.set(k, String(v)),
+            removeItem: (k) => storage.delete(k),
+            clear: () => storage.clear()
+        }};
+        Object.defineProperty(global, 'navigator', {{
+            value: {{ language: 'zh-TW', languages: ['zh-TW'] }},
+            writable: true,
+            configurable: true
+        }});
+
+        const elementsById = {{}};
+        const queryAllItems = {{
+            '[data-i18n]': [],
+            '[data-i18n-placeholder]': [],
+            '[data-i18n-title]': [],
+            '.toast-body[data-raw-msg]': []
+        }};
+
+        function makeEl(id, i18nKey, initialText = '') {{
+            const attrs = {{}};
+            if (i18nKey) attrs['data-i18n'] = i18nKey;
+            const el = {{
+                id: id,
+                innerText: initialText,
+                textContent: initialText,
+                placeholder: '',
+                title: '',
+                getAttribute: (k) => attrs[k] || null,
+                setAttribute: (k, v) => {{ attrs[k] = v; }},
+                querySelector: function(sel) {{ return this._childSpan || null; }}
+            }};
+            if (id) elementsById[id] = el;
+            if (i18nKey) queryAllItems['[data-i18n]'].push(el);
+            return el;
+        }}
+
+        global.document = {{
+            title: '🌸 花徑漫步',
+            documentElement: {{ lang: 'zh-TW' }},
+            getElementById: (id) => elementsById[id] || null,
+            querySelectorAll: (sel) => queryAllItems[sel] || []
+        }};
+
+        // Populate key DOM elements
+        makeEl('brandTitle', 'brand.title', '🌸 花徑漫步');
+        makeEl('selectDeviceLabel', 'top.select_device', '📱 選擇裝置');
+        makeEl('refresh', 'top.refresh', '🔄 重新整理');
+        makeEl('connectText', null, '🔗 連線裝置');
+        makeEl('disconnect', 'top.disconnect', '🔌 中斷連線');
+        makeEl('darkModeLabel', 'top.dark_mode', '🌙 深色模式');
+        makeEl('langSwitchBtn', null, '🌐 EN');
+        const exitBtn = makeEl('exit-btn', 'top.exit', '🚪 離開');
+        exitBtn.setAttribute('data-i18n-title', 'brand.title');
+        queryAllItems['[data-i18n-title]'].push(exitBtn);
+
+        makeEl('speedControlTitle', 'speed.title', '移動速度');
+        makeEl('speedPresetWalk', 'speed.walk', '🚶 散步 (5 km/h)');
+        makeEl('speedPresetBike', 'speed.plant', '🌸 種花 (19.1 km/h)');
+        makeEl('speedPresetDrive', 'speed.drive', '🚗 開車 (60 km/h)');
+
+        makeEl('navHudTitle', 'hud.title', '自動導航');
+        makeEl('navStatusBadge', null, '運行中');
+        makeEl('navPauseResumeBtn', null, '暫停');
+        makeEl('navStopBtn', 'hud.stop', '停止導航');
+
+        const coordsInput = makeEl('coordinates', null, '');
+        coordsInput.setAttribute('data-i18n-placeholder', 'bottom.coordinates_placeholder');
+        queryAllItems['[data-i18n-placeholder]'].push(coordsInput);
+        makeEl('search', 'bottom.search', '🔍 搜尋');
+        makeEl('set-location', 'bottom.start_location', '📍 開始定位');
+        makeEl('stop-location', 'bottom.stop_location', '🛑 停止定位');
+
+        const autoNavSpan = makeEl(null, 'map.auto_nav', '自動導航');
+        const autoNavBtn = makeEl('autoNavButton', null, '');
+        autoNavBtn._childSpan = autoNavSpan;
+
+        const cameraFollowSpan = makeEl(null, 'map.camera_follow', '鏡頭跟隨');
+        const cameraFollowBtn = makeEl('cameraFollowButton', null, '');
+        cameraFollowBtn._childSpan = cameraFollowSpan;
+
+        makeEl('shutdownModalLabel', 'modal.shutdown.title', '伺服器已關閉');
+        makeEl('shutdownModalBody', 'modal.shutdown.body', '感謝您的使用，祝您散步愉快！🌸');
+
+        eval(i18nMatch[0]);
+
+        {js_snippet}
+        """
+        result = subprocess.run(
+            ["node", "-e", runner_script, str(self.template_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+        return json.loads(result.stdout)
+
+    def test_language_switcher_pill_button_present_in_utility_cluster(self):
+        """Top bar utility cluster contains #langSwitchBtn pill button with toggleLocale() handler."""
+        self.assertIn('id="langSwitchBtn"', self.content)
+        self.assertIn('onclick="toggleLocale()"', self.content)
+        self.assertIn("🌐 EN", self.content)
+
+    def test_resolve_initial_locale_auto_detection_and_storage_override(self):
+        """resolveInitialLocale respects localStorage first, then navigator.language (zh* -> zh-TW, else en)."""
+        js = """
+        // 1. No localStorage, navigator.language = 'en-US' -> 'en'
+        localStorage.clear();
+        navigator.language = 'en-US';
+        const autoEn = resolveInitialLocale();
+
+        // 2. No localStorage, navigator.language = 'ja-JP' -> 'en'
+        navigator.language = 'ja-JP';
+        const autoJa = resolveInitialLocale();
+
+        // 3. No localStorage, navigator.language = 'zh-TW' -> 'zh-TW'
+        navigator.language = 'zh-TW';
+        const autoZhTw = resolveInitialLocale();
+
+        // 4. No localStorage, navigator.language = 'zh-CN' -> 'zh-TW'
+        navigator.language = 'zh-CN';
+        const autoZhCn = resolveInitialLocale();
+
+        // 5. localStorage overrides navigator.language
+        navigator.language = 'zh-TW';
+        localStorage.setItem('geoport_locale', 'en');
+        const storedEn = resolveInitialLocale();
+
+        navigator.language = 'en-US';
+        localStorage.setItem('geoport_locale', 'zh-TW');
+        const storedZh = resolveInitialLocale();
+
+        console.log(JSON.stringify({
+            autoEn, autoJa, autoZhTw, autoZhCn, storedEn, storedZh
+        }));
+        """
+        data = self._eval_i18n_js(js)
+        self.assertEqual(data["autoEn"], "en")
+        self.assertEqual(data["autoJa"], "en")
+        self.assertEqual(data["autoZhTw"], "zh-TW")
+        self.assertEqual(data["autoZhCn"], "zh-TW")
+        self.assertEqual(data["storedEn"], "en")
+        self.assertEqual(data["storedZh"], "zh-TW")
+
+    def test_toggle_locale_updates_brand_controls_and_persists_preference(self):
+        """Switching between zh-TW and en updates Blossom Walk brand, controls, placeholders, and localStorage."""
+        js = """
+        setLocale('zh-TW', true);
+        const zhState = {
+            locale: getLocale(),
+            stored: localStorage.getItem('geoport_locale'),
+            docTitle: document.title,
+            langBtnText: document.getElementById('langSwitchBtn').innerText,
+            langBtnTitle: document.getElementById('langSwitchBtn').title,
+            selectDevice: document.getElementById('selectDeviceLabel').innerText,
+            speedTitle: document.getElementById('speedControlTitle').innerText,
+            plantBtn: document.getElementById('speedPresetBike').innerText,
+            autoNavSpan: document.getElementById('autoNavButton')._childSpan.innerText,
+            cameraSpan: document.getElementById('cameraFollowButton')._childSpan.innerText,
+            coordsPlaceholder: document.getElementById('coordinates').placeholder,
+            startLoc: document.getElementById('set-location').innerText,
+            shutdownTitle: document.getElementById('shutdownModalLabel').innerText
+        };
+
+        toggleLocale();
+        const enState = {
+            locale: getLocale(),
+            stored: localStorage.getItem('geoport_locale'),
+            docTitle: document.title,
+            langBtnText: document.getElementById('langSwitchBtn').innerText,
+            langBtnTitle: document.getElementById('langSwitchBtn').title,
+            selectDevice: document.getElementById('selectDeviceLabel').innerText,
+            speedTitle: document.getElementById('speedControlTitle').innerText,
+            plantBtn: document.getElementById('speedPresetBike').innerText,
+            autoNavSpan: document.getElementById('autoNavButton')._childSpan.innerText,
+            cameraSpan: document.getElementById('cameraFollowButton')._childSpan.innerText,
+            coordsPlaceholder: document.getElementById('coordinates').placeholder,
+            startLoc: document.getElementById('set-location').innerText,
+            shutdownTitle: document.getElementById('shutdownModalLabel').innerText
+        };
+
+        console.log(JSON.stringify({ zhState, enState }));
+        """
+        data = self._eval_i18n_js(js)
+        zh = data["zhState"]
+        en = data["enState"]
+
+        self.assertEqual(zh["locale"], "zh-TW")
+        self.assertEqual(zh["stored"], "zh-TW")
+        self.assertEqual(zh["docTitle"], "🌸 花徑漫步")
+        self.assertEqual(zh["langBtnText"], "🌐 EN")
+        self.assertEqual(zh["langBtnTitle"], "Switch to English")
+        self.assertEqual(zh["plantBtn"], "🌸 種花 (19.1 km/h)")
+        self.assertEqual(zh["autoNavSpan"], "自動導航")
+        self.assertEqual(zh["cameraSpan"], "鏡頭跟隨")
+
+        self.assertEqual(en["locale"], "en")
+        self.assertEqual(en["stored"], "en")
+        self.assertEqual(en["docTitle"], "🌸 Blossom Walk")
+        self.assertEqual(en["langBtnText"], "🌐 中文")
+        self.assertEqual(en["langBtnTitle"], "切換至繁體中文")
+        self.assertEqual(en["selectDevice"], "📱 Device")
+        self.assertEqual(en["speedTitle"], "Speed")
+        self.assertEqual(en["plantBtn"], "🌸 Plant (19.1 km/h)")
+        self.assertEqual(en["autoNavSpan"], "Auto Navigation")
+        self.assertEqual(en["cameraSpan"], "Camera Tracking")
+        self.assertEqual(en["coordsPlaceholder"], "🔍 Enter coordinates (lat, lng) or search place…")
+        self.assertEqual(en["startLoc"], "📍 Start Location")
+        self.assertEqual(en["shutdownTitle"], "Server Shut Down")
+
+    def test_live_switching_preserves_dynamic_connection_and_hud_states(self):
+        """Switching language mid-session updates dynamic connection states and Navigation HUD states without reload."""
+        js = """
+        // Simulate connected device and paused navigation in zh-TW
+        setLocale('zh-TW', false);
+        document.getElementById('connectText').innerText = '✅ 已連線';
+        window.navPaused = true;
+        window.isAutoNavMode = true;
+        window.isCameraLocked = false;
+
+        // Switch to English live
+        setLocale('en', true);
+        const enConnected = {
+            connectText: document.getElementById('connectText').innerText,
+            isConnected: isDeviceConnected(),
+            navBadge: document.getElementById('navStatusBadge').innerText,
+            navPauseBtn: document.getElementById('navPauseResumeBtn').innerText,
+            autoNavTitle: document.getElementById('autoNavButton').title,
+            cameraTitle: document.getElementById('cameraFollowButton').title
+        };
+
+        // Switch back to zh-TW while navigation is running (unpaused)
+        window.navPaused = false;
+        setLocale('zh-TW', true);
+        const zhRunning = {
+            connectText: document.getElementById('connectText').innerText,
+            isConnected: isDeviceConnected(),
+            navBadge: document.getElementById('navStatusBadge').innerText,
+            navPauseBtn: document.getElementById('navPauseResumeBtn').innerText,
+            autoNavTitle: document.getElementById('autoNavButton').title,
+            cameraTitle: document.getElementById('cameraFollowButton').title
+        };
+
+        console.log(JSON.stringify({ enConnected, zhRunning }));
+        """
+        data = self._eval_i18n_js(js)
+        en = data["enConnected"]
+        zh = data["zhRunning"]
+
+        self.assertEqual(en["connectText"], "✅ Connected")
+        self.assertTrue(en["isConnected"])
+        self.assertEqual(en["navBadge"], "Paused")
+        self.assertEqual(en["navPauseBtn"], "Resume")
+        self.assertEqual(en["autoNavTitle"], "Auto Navigation (Active)")
+        self.assertEqual(en["cameraTitle"], "Camera Tracking (Unlocked)")
+
+        self.assertEqual(zh["connectText"], "✅ 已連線")
+        self.assertTrue(zh["isConnected"])
+        self.assertEqual(zh["navBadge"], "運行中")
+        self.assertEqual(zh["navPauseBtn"], "暫停")
+        self.assertEqual(zh["autoNavTitle"], "自動導航 (已開啟)")
+        self.assertEqual(zh["cameraTitle"], "鏡頭跟隨 (已解鎖)")
+
+    def test_backend_message_translation_and_error_prefix_handling(self):
+        """translateBackendMessage localizes known backend responses and preserves unknown error details after localized prefixes."""
+        js = """
+        setLocale('zh-TW', false);
+        const zhMsgs = {
+            setSuccess: translateBackendMessage('DVT set call completed; check the phone location'),
+            clearSuccess: translateBackendMessage('Location cleared successfully'),
+            errKnown: translateBackendMessage('Location failed: No iOS version present'),
+            errUnknown: translateBackendMessage('Location failed: Custom USB timeout 0x99')
+        };
+
+        setLocale('en', false);
+        const enMsgs = {
+            setSuccess: translateBackendMessage('DVT set call completed; check the phone location'),
+            clearSuccess: translateBackendMessage('Location cleared successfully'),
+            errKnown: translateBackendMessage('定位失敗：No iOS version present'),
+            errUnknown: translateBackendMessage('定位失敗：Custom USB timeout 0x99')
+        };
+
+        console.log(JSON.stringify({ zhMsgs, enMsgs }));
+        """
+        data = self._eval_i18n_js(js)
+        self.assertEqual(data["zhMsgs"]["setSuccess"], "📍 定位已更新，請確認手機位置")
+        self.assertEqual(data["zhMsgs"]["clearSuccess"], "🛑 已清除定位模擬")
+        self.assertEqual(data["zhMsgs"]["errKnown"], "定位失敗：無法取得裝置 iOS 版本，請先連線裝置")
+        self.assertEqual(data["zhMsgs"]["errUnknown"], "定位失敗：Custom USB timeout 0x99")
+
+        self.assertEqual(data["enMsgs"]["setSuccess"], "📍 Location updated; please check your device")
+        self.assertEqual(data["enMsgs"]["clearSuccess"], "🛑 Location cleared successfully")
+        self.assertEqual(data["enMsgs"]["errKnown"], "Location failed: No iOS version present; please connect a device first")
+        self.assertEqual(data["enMsgs"]["errUnknown"], "Location failed: Custom USB timeout 0x99")
 
 
 if __name__ == "__main__":

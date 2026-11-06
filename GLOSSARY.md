@@ -1,6 +1,6 @@
-# GeoPort (花徑漫步) Domain Model
+# GeoPort (花徑漫步 / Blossom Walk) Domain Model
 
-**花徑漫步** (codebase/internal name: `GeoPort`) is an iOS location simulation and spoofing workbench supporting developer tunnel protocols, automated pedestrian navigation, and manual real-time steering.
+**花徑漫步** (English brand name: **Blossom Walk**; codebase/internal name: `GeoPort`) is an iOS location simulation and spoofing workbench supporting developer tunnel protocols, automated pedestrian navigation, and manual real-time steering.
 
 ## Language
 

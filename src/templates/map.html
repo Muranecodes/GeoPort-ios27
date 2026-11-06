@@ -919,27 +919,28 @@ body.dark-mode .badge-warning {
     <!-- Tier 1: Top Bento Bar -->
     <header class="bento-card bento-top-bar">
         <div class="brand-cluster">
-            <span class="brand-title">🌸 花徑漫步</span>
+            <span class="brand-title" data-i18n="brand.title">🌸 花徑漫步</span>
         </div>
 
         <div class="device-cluster">
-            <label for="device" class="bento-label">📱 選擇裝置</label>
+            <label for="device" class="bento-label" data-i18n="top.select_device">📱 選擇裝置</label>
             <select class="form-select custom-select bento-select form-select-sm" id="device" required></select>
-            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="refresh" onclick="populateDeviceList()">🔄 重新整理</button>
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="refresh" data-i18n="top.refresh" onclick="populateDeviceList()">🔄 重新整理</button>
             <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="connect" onclick="connectDevice()">
                 <span id="connectText">🔗 連線裝置</span>
                 <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
             </button>
-            <button type="button" class="btn btn-sm btn-bento-danger text-nowrap" id="disconnect" onclick="disconnectDevice()" style="display: none;">🔌 中斷連線</button>
+            <button type="button" class="btn btn-sm btn-bento-danger text-nowrap" id="disconnect" data-i18n="top.disconnect" onclick="disconnectDevice()" style="display: none;">🔌 中斷連線</button>
             <input class="form-control" type="text" id="rsdData" placeholder="RSD Data…" readonly style="display: none;">
         </div>
 
         <div class="utility-cluster">
             <div class="form-check form-switch d-flex align-items-center mb-0">
                 <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
-                <label class="form-check-label bento-label ms-2 mb-0" for="darkModeSwitch">🌙 深色模式</label>
+                <label class="form-check-label bento-label ms-2 mb-0" for="darkModeSwitch" data-i18n="top.dark_mode">🌙 深色模式</label>
             </div>
-            <a id="exit-btn" class="btn btn-sm btn-bento-outline text-nowrap" href="#" title="🌸 花徑漫步" onclick="exitApp()">🚪 離開</a>
+            <button type="button" id="langSwitchBtn" class="btn btn-sm btn-bento-outline text-nowrap" title="Switch to English" onclick="toggleLocale()">🌐 EN</button>
+            <a id="exit-btn" class="btn btn-sm btn-bento-outline text-nowrap" href="#" title="🌸 花徑漫步" data-i18n="top.exit" data-i18n-title="brand.title" onclick="exitApp()">🚪 離開</a>
         </div>
     </header>
 
@@ -948,13 +949,13 @@ body.dark-mode .badge-warning {
         <!-- Speed Control Toolbar Widget -->
         <div id="speedControlWidget" class="speed-control-widget mb-2">
             <div class="speed-control-header">
-                <span><i class="fa-solid fa-gauge-high mr-1"></i> 移動速度</span>
+                <span><i class="fa-solid fa-gauge-high mr-1"></i> <span id="speedControlTitle" data-i18n="speed.title">移動速度</span></span>
                 <span id="speedDisplayBadge" class="badge">5 km/h</span>
             </div>
             <div class="speed-presets-group" role="group" aria-label="Speed Presets">
-                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)" title="Walk (5 km/h)">🚶 散步 (5 km/h)</button>
-                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)" title="🌸 種花 (19.1 km/h)">🌸 種花 (19.1 km/h)</button>
-                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)" title="Drive (60 km/h)">🚗 開車 (60 km/h)</button>
+                <button type="button" class="speed-preset-btn active" id="speedPresetWalk" data-speed="5" onclick="setSpeed(5.0)" title="Walk (5 km/h)" data-i18n="speed.walk" data-i18n-title="speed.walk_title">🚶 散步 (5 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetBike" data-speed="19.1" onclick="setSpeed(19.1)" title="🌸 種花 (19.1 km/h)" data-i18n="speed.plant" data-i18n-title="speed.plant_title">🌸 種花 (19.1 km/h)</button>
+                <button type="button" class="speed-preset-btn" id="speedPresetDrive" data-speed="60" onclick="setSpeed(60.0)" title="Drive (60 km/h)" data-i18n="speed.drive" data-i18n-title="speed.drive_title">🚗 開車 (60 km/h)</button>
             </div>
             <div class="speed-inputs-row">
                 <div class="speed-slider-wrap">
@@ -971,26 +972,26 @@ body.dark-mode .badge-warning {
         <div id="navigationHud" class="navigation-hud card mb-2" style="display: none;">
             <div class="card-body p-2">
                 <div class="navigation-hud-header d-flex justify-content-between align-items-center mb-2">
-                    <span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> 自動導航</span>
+                    <span class="hud-title font-weight-bold"><i class="fa-solid fa-location-arrow mr-1"></i> <span id="navHudTitle" data-i18n="hud.title">自動導航</span></span>
                     <span id="navStatusBadge" class="badge badge-success bg-success">運行中</span>
                 </div>
                 <div class="hud-stats-row mb-2">
                     <div class="hud-stat-item">
-                        <span class="hud-stat-label">速度</span>
+                        <span class="hud-stat-label" data-i18n="hud.speed_label">速度</span>
                         <span id="navHudSpeed" class="hud-stat-value">5.0 km/h</span>
                     </div>
                     <div class="hud-stat-item">
-                        <span class="hud-stat-label">剩餘距離</span>
+                        <span class="hud-stat-label" data-i18n="hud.distance_label">剩餘距離</span>
                         <span id="navHudDistance" class="hud-stat-value">0 m</span>
                     </div>
                     <div class="hud-stat-item">
-                        <span class="hud-stat-label">預計抵達</span>
+                        <span class="hud-stat-label" data-i18n="hud.eta_label">預計抵達</span>
                         <span id="navHudEta" class="hud-stat-value">0s</span>
                     </div>
                 </div>
                 <div class="hud-actions d-flex gap-2">
                     <button type="button" id="navPauseResumeBtn" class="btn btn-sm btn-outline-warning flex-fill" onclick="toggleNavPause()">暫停</button>
-                    <button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" onclick="stopNavigation()">停止導航</button>
+                    <button type="button" id="navStopBtn" class="btn btn-sm btn-danger flex-fill" data-i18n="hud.stop" onclick="stopNavigation()">停止導航</button>
                 </div>
             </div>
         </div>
@@ -1001,12 +1002,12 @@ body.dark-mode .badge-warning {
     <!-- Tier 3: Bottom Bento Bar -->
     <footer class="bento-card bento-bottom-bar">
         <div class="search-cluster">
-            <input type="text" class="form-control form-control-sm bento-input" id="coordinates" placeholder="🔍 輸入座標 (lat, lng) 或搜尋地名…">
-            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="search" onclick="handleSearch()">🔍 搜尋</button>
+            <input type="text" class="form-control form-control-sm bento-input" id="coordinates" data-i18n-placeholder="bottom.coordinates_placeholder" placeholder="🔍 輸入座標 (lat, lng) 或搜尋地名…">
+            <button type="button" class="btn btn-sm btn-bento-primary text-nowrap" id="search" data-i18n="bottom.search" onclick="handleSearch()">🔍 搜尋</button>
         </div>
         <div class="simulation-cluster">
-            <button type="button" class="btn btn-sm btn-bento-pill-success text-nowrap" data-toggle="popover" id="set-location" disabled onclick="setLocation()">📍 開始定位</button>
-            <button type="button" class="btn btn-sm btn-bento-pill-danger text-nowrap" data-toggle="popover" id="stop-location" disabled onclick="stopLocation()">🛑 停止定位</button>
+            <button type="button" class="btn btn-sm btn-bento-pill-success text-nowrap" data-toggle="popover" id="set-location" data-i18n="bottom.start_location" disabled onclick="setLocation()">📍 開始定位</button>
+            <button type="button" class="btn btn-sm btn-bento-pill-danger text-nowrap" data-toggle="popover" id="stop-location" data-i18n="bottom.stop_location" disabled onclick="stopLocation()">🛑 停止定位</button>
         </div>
     </footer>
 </div>
@@ -1166,9 +1167,466 @@ L.leafletMenu = function(a, b) {
 
 
 
+    //============================ i18n Localization (zh-TW / en) ======================
+    const I18N_TRANSLATIONS = {
+        'zh-TW': {
+            'brand.title': '🌸 花徑漫步',
+            'top.select_device': '📱 選擇裝置',
+            'top.refresh': '🔄 重新整理',
+            'top.connect': '🔗 連線裝置',
+            'top.connecting': '連線中，請稍候…',
+            'top.connected': '✅ 已連線',
+            'top.connect_failed': '連線失敗',
+            'top.enabling_dev_mode': '正在啟用開發者模式…',
+            'top.disconnect': '🔌 中斷連線',
+            'top.dark_mode': '🌙 深色模式',
+            'top.exit': '🚪 離開',
+            'top.lang_switch_label': '🌐 EN',
+            'top.lang_switch_title': 'Switch to English',
+            'speed.title': '移動速度',
+            'speed.walk': '🚶 散步 (5 km/h)',
+            'speed.walk_title': 'Walk (5 km/h)',
+            'speed.plant': '🌸 種花 (19.1 km/h)',
+            'speed.plant_title': '🌸 種花 (19.1 km/h)',
+            'speed.drive': '🚗 開車 (60 km/h)',
+            'speed.drive_title': 'Drive (60 km/h)',
+            'hud.title': '自動導航',
+            'hud.status_running': '運行中',
+            'hud.status_paused': '已暫停',
+            'hud.speed_label': '速度',
+            'hud.distance_label': '剩餘距離',
+            'hud.eta_label': '預計抵達',
+            'hud.pause': '暫停',
+            'hud.resume': '繼續',
+            'hud.stop': '停止導航',
+            'bottom.coordinates_placeholder': '🔍 輸入座標 (lat, lng) 或搜尋地名…',
+            'bottom.search': '🔍 搜尋',
+            'bottom.start_location': '📍 開始定位',
+            'bottom.stop_location': '🛑 停止定位',
+            'map.auto_nav': '自動導航',
+            'map.auto_nav_title': '自動導航',
+            'map.auto_nav_active_title': '自動導航 (已開啟)',
+            'map.camera_follow': '鏡頭跟隨',
+            'map.camera_locked_title': '鏡頭跟隨 (已鎖定)',
+            'map.camera_unlocked_title': '鏡頭跟隨 (已解鎖)',
+            'map.set_starting_point': '📌 設為預設起點',
+            'popup.edit_marker': '編輯標記',
+            'popup.name': '名稱：',
+            'popup.description': '描述：',
+            'popup.save': '儲存',
+            'popup.coordinates': '座標：',
+            'prompt.save_filename': '請輸入檔案名稱 (例如: map_data.geojson):',
+            'toast.just_now': '剛剛',
+            'toast.starting_point_saved': '已儲存預設起點',
+            'toast.arrived': '已到達目的地',
+            'toast.waypoints_min_error': '導航路徑至少需要2個座標點',
+            'toast.nav_start_failed_prefix': '啟動導航失敗: ',
+            'toast.auto_nav_on': '自動導航模式已開啟：請點擊地圖目的地出發',
+            'toast.auto_nav_off': '自動導航模式已關閉',
+            'toast.set_location_first': '請先在地圖上設定當前位置或連線設備',
+            'toast.auto_nav_interrupted': '自動導航已中斷，切換為手動操作',
+            'toast.select_device_first': '請先選擇裝置。',
+            'toast.enable_dev_mode_error': '啟用開發者模式時發生錯誤。',
+            'toast.search_no_results': '找不到符合該地點的搜尋結果',
+            'toast.location_updated': '📍 定位已更新，請確認手機位置',
+            'toast.location_cleared': '🛑 已清除定位模擬',
+            'toast.dev_image_mounted': '已成功掛載開發者映像檔',
+            'toast.location_not_set': '尚未設定定位座標',
+            'toast.no_ios_version': '無法取得裝置 iOS 版本，請先連線裝置',
+            'toast.not_sudo': '⚠️ 未以管理員 (sudo) 權限執行，功能可能無法正常運作',
+            'toast.location_failed_prefix': '定位失敗：',
+            'toast.stop_location_failed_prefix': '停止定位失敗：',
+            'modal.shutdown.title': '伺服器已關閉',
+            'modal.shutdown.body': '感謝您的使用，祝您散步愉快！🌸',
+            'modal.dev_passcode.title': '需要開發者模式',
+            'modal.dev_passcode.p1': '裝置已設定螢幕鎖定密碼。',
+            'modal.dev_passcode.p2': '啟用「開發者模式」時無法處於設有密碼狀態，請先暫時關閉裝置密碼後再嘗試連線。',
+            'modal.dev_passcode.note': '註：開啟開發者模式通常只需設定一次。',
+            'modal.pair_record.title': '無配對紀錄',
+            'modal.pair_record.p1': '找不到此裝置的配對信任紀錄。',
+            'modal.pair_record.p2': '請先使用 USB 傳輸線連接電腦與裝置以建立配對信任。',
+            'modal.dev_required.title': '需要啟用開發者模式',
+            'modal.dev_required.p1': '裝置尚未啟用開發者模式。',
+            'modal.dev_required.p2': '「🌸 花徑漫步」將嘗試為您的裝置啟用開發者模式，過程中裝置將會自動重新開機。',
+            'modal.dev_required.p3': '點擊「確定」繼續，或點擊「取消」返回。',
+            'modal.timeout.title': '連線逾時',
+            'modal.timeout.p1': '無法在 60 秒內建立裝置通道。',
+            'modal.timeout.p2': '請檢查裝置解鎖狀態與連接線，並重新嘗試連線。',
+            'modal.dev_error.title': '開發者錯誤',
+            'modal.common.ok': '好',
+            'modal.common.confirm': '確定',
+            'modal.common.cancel': '取消',
+            'modal.common.close': '關閉'
+        },
+        'en': {
+            'brand.title': '🌸 Blossom Walk',
+            'top.select_device': '📱 Device',
+            'top.refresh': '🔄 Refresh',
+            'top.connect': '🔗 Connect',
+            'top.connecting': 'Connecting…',
+            'top.connected': '✅ Connected',
+            'top.connect_failed': 'Connection Failed',
+            'top.enabling_dev_mode': 'Enabling Developer Mode…',
+            'top.disconnect': '🔌 Disconnect',
+            'top.dark_mode': '🌙 Dark Mode',
+            'top.exit': '🚪 Exit',
+            'top.lang_switch_label': '🌐 中文',
+            'top.lang_switch_title': '切換至繁體中文',
+            'speed.title': 'Speed',
+            'speed.walk': '🚶 Walk (5 km/h)',
+            'speed.walk_title': 'Walk (5 km/h)',
+            'speed.plant': '🌸 Plant (19.1 km/h)',
+            'speed.plant_title': '🌸 Plant (19.1 km/h)',
+            'speed.drive': '🚗 Drive (60 km/h)',
+            'speed.drive_title': 'Drive (60 km/h)',
+            'hud.title': 'Auto Navigation',
+            'hud.status_running': 'Running',
+            'hud.status_paused': 'Paused',
+            'hud.speed_label': 'Speed',
+            'hud.distance_label': 'Distance',
+            'hud.eta_label': 'ETA',
+            'hud.pause': 'Pause',
+            'hud.resume': 'Resume',
+            'hud.stop': 'Stop',
+            'bottom.coordinates_placeholder': '🔍 Enter coordinates (lat, lng) or search place…',
+            'bottom.search': '🔍 Search',
+            'bottom.start_location': '📍 Start Location',
+            'bottom.stop_location': '🛑 Stop Location',
+            'map.auto_nav': 'Auto Navigation',
+            'map.auto_nav_title': 'Auto Navigation',
+            'map.auto_nav_active_title': 'Auto Navigation (Active)',
+            'map.camera_follow': 'Camera Tracking',
+            'map.camera_locked_title': 'Camera Tracking (Locked)',
+            'map.camera_unlocked_title': 'Camera Tracking (Unlocked)',
+            'map.set_starting_point': '📌 Set as Starting Point',
+            'popup.edit_marker': 'Edit Marker',
+            'popup.name': 'Name:',
+            'popup.description': 'Description:',
+            'popup.save': 'Save',
+            'popup.coordinates': 'Coordinates:',
+            'prompt.save_filename': 'Please enter the filename (e.g., map_data.geojson):',
+            'toast.just_now': 'Just now',
+            'toast.starting_point_saved': 'Starting point saved',
+            'toast.arrived': 'Arrived at destination',
+            'toast.waypoints_min_error': 'Navigation route requires at least 2 waypoints',
+            'toast.nav_start_failed_prefix': 'Failed to start navigation: ',
+            'toast.auto_nav_on': 'Auto Navigation enabled: click a destination on the map to start',
+            'toast.auto_nav_off': 'Auto Navigation disabled',
+            'toast.set_location_first': 'Please set a location on the map or connect a device first',
+            'toast.auto_nav_interrupted': 'Auto Navigation interrupted; switched to manual steering',
+            'toast.select_device_first': 'Please select a device first.',
+            'toast.enable_dev_mode_error': 'An error occurred while enabling Developer Mode.',
+            'toast.search_no_results': 'No results found for the provided location',
+            'toast.location_updated': '📍 Location updated; please check your device',
+            'toast.location_cleared': '🛑 Location cleared successfully',
+            'toast.dev_image_mounted': 'Developer image mounted successfully',
+            'toast.location_not_set': 'Location is not set',
+            'toast.no_ios_version': 'No iOS version present; please connect a device first',
+            'toast.not_sudo': '⚠️ Not running as sudo; location simulation may not work',
+            'toast.location_failed_prefix': 'Location failed: ',
+            'toast.stop_location_failed_prefix': 'Stop location failed: ',
+            'modal.shutdown.title': 'Server Shut Down',
+            'modal.shutdown.body': 'Thank you for using Blossom Walk! Enjoy your stroll! 🌸',
+            'modal.dev_passcode.title': 'Developer Mode Required',
+            'modal.dev_passcode.p1': 'A passcode is currently set on your device.',
+            'modal.dev_passcode.p2': 'Developer Mode cannot be enabled while a passcode is active. Please temporarily disable your device passcode and try connecting again.',
+            'modal.dev_passcode.note': 'Note: Enabling Developer Mode is typically a one-time setup.',
+            'modal.pair_record.title': 'No Pair Record',
+            'modal.pair_record.p1': 'No pairing trust record was found for this device.',
+            'modal.pair_record.p2': 'Please connect your device to the computer via a USB cable first to establish trust.',
+            'modal.dev_required.title': 'Enable Developer Mode',
+            'modal.dev_required.p1': 'Developer Mode is not enabled on this device.',
+            'modal.dev_required.p2': '"🌸 Blossom Walk" will attempt to enable Developer Mode on your device. Your device will restart automatically during this process.',
+            'modal.dev_required.p3': 'Click "Confirm" to proceed, or "Cancel" to go back.',
+            'modal.timeout.title': 'Connection Timed Out',
+            'modal.timeout.p1': 'Could not establish a device tunnel within 60 seconds.',
+            'modal.timeout.p2': 'Please check that your device is unlocked and properly connected, then try again.',
+            'modal.dev_error.title': 'Developer Error',
+            'modal.common.ok': 'OK',
+            'modal.common.confirm': 'Confirm',
+            'modal.common.cancel': 'Cancel',
+            'modal.common.close': 'Close'
+        }
+    };
+    window.I18N_TRANSLATIONS = I18N_TRANSLATIONS;
+
+    const BACKEND_MESSAGE_MAP = {
+        'DVT set call completed; check the phone location': 'toast.location_updated',
+        'Location cleared successfully': 'toast.location_cleared',
+        'Developer image mounted successfully': 'toast.dev_image_mounted',
+        'Location is not set': 'toast.location_not_set',
+        'No iOS version present': 'toast.no_ios_version',
+        "Not running as Sudo, this probably isn't going to work": 'toast.not_sudo'
+    };
+    // Add reverse lookup for all toast.* keys so any toast message can be re-localized live
+    Object.keys(I18N_TRANSLATIONS['zh-TW']).forEach(function(key) {
+        if (key.indexOf('toast.') === 0) {
+            BACKEND_MESSAGE_MAP[I18N_TRANSLATIONS['zh-TW'][key]] = key;
+            BACKEND_MESSAGE_MAP[I18N_TRANSLATIONS['en'][key]] = key;
+        }
+    });
+    window.BACKEND_MESSAGE_MAP = BACKEND_MESSAGE_MAP;
+
+    window.currentLocale = 'zh-TW';
+    window.connectionState = 'disconnected';
+
+    function resolveInitialLocale() {
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage) {
+                const saved = localStorage.getItem('geoport_locale');
+                if (saved === 'zh-TW' || saved === 'en') {
+                    return saved;
+                }
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof navigator !== 'undefined' && navigator) {
+                const navLang = navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0]) || '';
+                if (typeof navLang === 'string' && navLang.trim() !== '') {
+                    return navLang.trim().toLowerCase().indexOf('zh') === 0 ? 'zh-TW' : 'en';
+                }
+            }
+        } catch (e) {}
+
+        return 'zh-TW';
+    }
+    window.resolveInitialLocale = resolveInitialLocale;
+
+    function getLocale() {
+        return window.currentLocale === 'en' ? 'en' : 'zh-TW';
+    }
+    window.getLocale = getLocale;
+
+    function t(key, fallback) {
+        const locale = getLocale();
+        const dict = I18N_TRANSLATIONS[locale] || I18N_TRANSLATIONS['zh-TW'];
+        if (dict && Object.prototype.hasOwnProperty.call(dict, key)) {
+            return dict[key];
+        }
+        if (I18N_TRANSLATIONS['zh-TW'] && Object.prototype.hasOwnProperty.call(I18N_TRANSLATIONS['zh-TW'], key)) {
+            return I18N_TRANSLATIONS['zh-TW'][key];
+        }
+        return fallback !== undefined ? fallback : key;
+    }
+    window.t = t;
+
+    function translateBackendMessage(rawMsg) {
+        if (typeof rawMsg !== 'string' || !rawMsg) return rawMsg;
+        const trimmed = rawMsg.trim();
+        if (Object.prototype.hasOwnProperty.call(BACKEND_MESSAGE_MAP, trimmed)) {
+            return t(BACKEND_MESSAGE_MAP[trimmed], rawMsg);
+        }
+
+        const prefixRules = [
+            { prefixes: ['Location failed: ', '定位失敗：', '定位失敗: '], key: 'toast.location_failed_prefix' },
+            { prefixes: ['Stop location failed: ', '停止定位失敗：', '停止定位失敗: '], key: 'toast.stop_location_failed_prefix' },
+            { prefixes: ['啟動導航失敗: ', 'Failed to start navigation: '], key: 'toast.nav_start_failed_prefix' }
+        ];
+        for (let i = 0; i < prefixRules.length; i++) {
+            const rule = prefixRules[i];
+            for (let j = 0; j < rule.prefixes.length; j++) {
+                const p = rule.prefixes[j];
+                if (trimmed.indexOf(p) === 0) {
+                    const rest = trimmed.slice(p.length);
+                    return t(rule.key) + translateBackendMessage(rest);
+                }
+            }
+        }
+        return rawMsg;
+    }
+    window.translateBackendMessage = translateBackendMessage;
+
+    function inferConnectionState() {
+        const el = document.getElementById('connectText');
+        if (el) {
+            const txt = (el.innerText || el.textContent || '').trim();
+            if (txt === '✅ 已連線' || txt === '✅ Connected' || txt === 'Connected') {
+                window.connectionState = 'connected';
+                return 'connected';
+            }
+            if (txt === '連線中，請稍候…' || txt === 'Connecting…') {
+                window.connectionState = 'connecting';
+                return 'connecting';
+            }
+            if (txt === '連線失敗' || txt === 'Connection Failed') {
+                window.connectionState = 'failed';
+                return 'failed';
+            }
+            if (txt === '正在啟用開發者模式…' || txt === 'Enabling Developer Mode…') {
+                window.connectionState = 'enabling_dev_mode';
+                return 'enabling_dev_mode';
+            }
+            if (txt === '🔗 連線裝置' || txt === '🔗 Connect') {
+                window.connectionState = 'disconnected';
+                return 'disconnected';
+            }
+        }
+        return window.connectionState || 'disconnected';
+    }
+    window.inferConnectionState = inferConnectionState;
+
+    function applyTranslations() {
+        if (typeof document === 'undefined' || !document) return;
+
+        document.title = t('brand.title');
+        if (document.documentElement) {
+            document.documentElement.lang = getLocale();
+        }
+
+        if (typeof document.querySelectorAll === 'function') {
+            const textEls = document.querySelectorAll('[data-i18n]');
+            for (let i = 0; i < textEls.length; i++) {
+                const el = textEls[i];
+                const key = el.getAttribute('data-i18n');
+                if (key) {
+                    const val = t(key);
+                    el.textContent = val;
+                    if ('innerText' in el) {
+                        el.innerText = val;
+                    }
+                }
+            }
+
+            const placeholderEls = document.querySelectorAll('[data-i18n-placeholder]');
+            for (let i = 0; i < placeholderEls.length; i++) {
+                const el = placeholderEls[i];
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (key) {
+                    el.placeholder = t(key);
+                }
+            }
+
+            const titleEls = document.querySelectorAll('[data-i18n-title]');
+            for (let i = 0; i < titleEls.length; i++) {
+                const el = titleEls[i];
+                const key = el.getAttribute('data-i18n-title');
+                if (key) {
+                    el.title = t(key);
+                }
+            }
+        }
+
+        const langBtn = document.getElementById('langSwitchBtn');
+        if (langBtn) {
+            const label = t('top.lang_switch_label');
+            langBtn.textContent = label;
+            if ('innerText' in langBtn) {
+                langBtn.innerText = label;
+            }
+            langBtn.title = t('top.lang_switch_title');
+        }
+
+        const connState = inferConnectionState();
+        const connectTextEl = document.getElementById('connectText');
+        if (connectTextEl) {
+            const stateKeyMap = {
+                'connected': 'top.connected',
+                'connecting': 'top.connecting',
+                'failed': 'top.connect_failed',
+                'enabling_dev_mode': 'top.enabling_dev_mode',
+                'disconnected': 'top.connect'
+            };
+            const key = stateKeyMap[connState] || 'top.connect';
+            const val = t(key);
+            connectTextEl.textContent = val;
+            if ('innerText' in connectTextEl) {
+                connectTextEl.innerText = val;
+            }
+        }
+
+        const disconnectBtn = document.getElementById('disconnect');
+        if (disconnectBtn) {
+            const val = t('top.disconnect');
+            disconnectBtn.textContent = val;
+            if ('innerText' in disconnectBtn) {
+                disconnectBtn.innerText = val;
+            }
+        }
+
+        const autoNavBtn = document.getElementById('autoNavButton');
+        if (autoNavBtn) {
+            autoNavBtn.title = window.isAutoNavMode ? t('map.auto_nav_active_title') : t('map.auto_nav_title');
+            if (typeof autoNavBtn.querySelector === 'function') {
+                const span = autoNavBtn.querySelector('span');
+                if (span) {
+                    span.textContent = t('map.auto_nav');
+                    if ('innerText' in span) span.innerText = t('map.auto_nav');
+                }
+            }
+        }
+
+        const cameraBtn = document.getElementById('cameraFollowButton');
+        if (cameraBtn) {
+            cameraBtn.title = window.isCameraLocked ? t('map.camera_locked_title') : t('map.camera_unlocked_title');
+            if (typeof cameraBtn.querySelector === 'function') {
+                const span = cameraBtn.querySelector('span');
+                if (span) {
+                    span.textContent = t('map.camera_follow');
+                    if ('innerText' in span) span.innerText = t('map.camera_follow');
+                }
+            }
+        }
+
+        const navStatusBadge = document.getElementById('navStatusBadge');
+        if (navStatusBadge) {
+            const statusText = window.navPaused ? t('hud.status_paused') : t('hud.status_running');
+            navStatusBadge.textContent = statusText;
+            if ('innerText' in navStatusBadge) navStatusBadge.innerText = statusText;
+        }
+
+        const navPauseBtn = document.getElementById('navPauseResumeBtn');
+        if (navPauseBtn) {
+            const pauseText = window.navPaused ? t('hud.resume') : t('hud.pause');
+            navPauseBtn.textContent = pauseText;
+            if ('innerText' in navPauseBtn) navPauseBtn.innerText = pauseText;
+        }
+
+        if (typeof document.querySelectorAll === 'function') {
+            const toastBodies = document.querySelectorAll('.toast-body[data-raw-msg]');
+            for (let i = 0; i < toastBodies.length; i++) {
+                const bodyEl = toastBodies[i];
+                const raw = bodyEl.getAttribute('data-raw-msg');
+                if (raw) {
+                    bodyEl.textContent = translateBackendMessage(raw);
+                }
+            }
+        }
+    }
+    window.applyTranslations = applyTranslations;
+
+    function setLocale(locale, persist = true) {
+        const normalized = locale === 'en' ? 'en' : 'zh-TW';
+        window.currentLocale = normalized;
+        if (persist) {
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage) {
+                    localStorage.setItem('geoport_locale', normalized);
+                }
+            } catch (e) {}
+        }
+        applyTranslations();
+        return normalized;
+    }
+    window.setLocale = setLocale;
+
+    function toggleLocale() {
+        const nextLocale = getLocale() === 'zh-TW' ? 'en' : 'zh-TW';
+        return setLocale(nextLocale, true);
+    }
+    window.toggleLocale = toggleLocale;
+
+    function initLocale() {
+        const initial = resolveInitialLocale();
+        setLocale(initial, false);
+    }
+    window.initLocale = initLocale;
+    //==================================================================================
+
     function isDeviceConnected() {
         const el = document.getElementById('connectText');
-        return el && (el.innerText === "✅ 已連線" || el.innerText === "Connected");
+        const txt = el ? (el.innerText || el.textContent || '').trim() : '';
+        return Boolean(el && (txt === "✅ 已連線" || txt === "✅ Connected" || txt === "Connected"));
     }
     window.isDeviceConnected = isDeviceConnected;
 
@@ -1417,7 +1875,8 @@ saveMapButton.button.classList.add('leaflet-control-filelayer-custom');
 // Function to handle save button click
 function handleSaveButtonClick() {
     // Prompt for filename with default folder structure
-    var filename = prompt("Please enter the filename (e.g., map_data.geojson):", "map_data.geojson");
+    var promptText = typeof t === 'function' ? t('prompt.save_filename', "Please enter the filename (e.g., map_data.geojson):") : "Please enter the filename (e.g., map_data.geojson):";
+    var filename = prompt(promptText, "map_data.geojson");
     if (filename != null) {
         var data = leafletToGeoJSON();
         downloadGeoJSON(data, filename);
@@ -1605,7 +2064,7 @@ var autoNavButton = L.easyButton({
     id: 'autoNavButton',
     states: [{
         stateName: 'auto-nav',
-        icon: '<i class="lni lni-direction-alt mr-1"></i><span>自動導航</span>',
+        icon: '<i class="lni lni-direction-alt mr-1"></i><span data-i18n="map.auto_nav">自動導航</span>',
         title: 'Auto Navigation',
         onClick: function(btn, map) {
             toggleAutoNavMode();
@@ -1625,7 +2084,7 @@ var cameraFollowButton = L.easyButton({
     id: 'cameraFollowButton',
     states: [{
         stateName: 'camera-follow',
-        icon: '<i class="lni lni-target mr-1"></i><span>鏡頭跟隨</span>',
+        icon: '<i class="lni lni-target mr-1"></i><span data-i18n="map.camera_follow">鏡頭跟隨</span>',
         title: 'Camera Tracking (Locked)',
         onClick: function(btn, map) {
             toggleCameraLock();
@@ -1640,6 +2099,10 @@ if (fileLayerControlContainer) {
 }
 cameraFollowButton.button.classList.add('leaflet-control-filelayer-custom');
 cameraFollowButton.button.classList.add('active'); // Default state is locked
+
+if (typeof applyTranslations === 'function') {
+    applyTranslations();
+}
 
 //===========
 
@@ -2099,7 +2562,12 @@ async function searchLocation(input, userLocale) {
             map.setView([y, x], 13);
             setCoordinates(y, x);
         } else {
-            alert("No results found for the provided location");
+            const noResultsMsg = typeof t === 'function' ? t('toast.search_no_results', "No results found for the provided location") : "No results found for the provided location";
+            if (typeof displayToast === 'function') {
+                displayToast(noResultsMsg);
+            } else {
+                alert(noResultsMsg);
+            }
         }
     } catch (error) {
         console.error('Error during geocoding:', error);
@@ -2136,10 +2604,11 @@ function onEachFeature(feature, layer) {
 function generatePopupContent(properties) {
     let content = '';
     console.log("generate props: ", properties)
+    const coordLabel = typeof t === 'function' ? t('popup.coordinates', 'Coordinates:') : 'Coordinates:';
     for (const key in properties) {
         content = `<h4 style="text-align: center;">${properties.name}</h4>`;
         content += `<p><strong>${key}:</strong><br>${properties[key]}<br>`;
-        content += `<p><strong>Coordinates:</strong><br> ${coordinates.value}<br>`;
+        content += `<p><strong data-i18n="popup.coordinates">${coordLabel}</strong><br> ${coordinates.value}<br>`;
     }
     return content;
 }
@@ -2163,10 +2632,11 @@ function handleMapContextMenu(event) {
     });
     menu.setLatLng(event.latlng);
 
+    const startPointLabel = typeof t === 'function' ? t('map.set_starting_point', '📌 設為預設起點') : '📌 設為預設起點';
     const content = `
         <div class="text-center p-1" style="min-width: 150px;">
-            <button type="button" class="btn btn-sm btn-bento-primary w-100" onclick="saveStartingPoint(${lat}, ${lng}, ${zoom})">
-                📌 設為預設起點
+            <button type="button" class="btn btn-sm btn-bento-primary w-100" data-i18n="map.set_starting_point" onclick="saveStartingPoint(${lat}, ${lng}, ${zoom})">
+                ${startPointLabel}
             </button>
         </div>
     `;
@@ -2184,7 +2654,7 @@ function saveStartingPoint(lat, lng, zoom) {
     map.closePopup();
 
     if (typeof displayToast === 'function') {
-        displayToast("已儲存預設起點");
+        displayToast(typeof t === 'function' ? t('toast.starting_point_saved', "已儲存預設起點") : "已儲存預設起點");
     }
 }
 
@@ -2201,9 +2671,9 @@ function handleMarkerRightClick(event) {
     // Check if the event object contains the necessary properties
     if (event.target && event.target.feature && event.target.feature.properties) {
         let content = generateEditPopupContent(event.target.feature.properties);
-         // Style the button as a Bootstrap 5 button and center align it
+        const saveLabel = typeof t === 'function' ? t('popup.save', 'Save') : 'Save';
         content += '<div class="text-center">';
-        content += '<br><button type="button" id="saveActive" class="btn btn-primary" onclick="saveChanges()">Save</button>';
+        content += `<br><button type="button" id="saveActive" class="btn btn-primary" data-i18n="popup.save" onclick="saveChanges()">${saveLabel}</button>`;
         content += '</div>';
 
         menu.setContent(content);
@@ -2217,18 +2687,19 @@ function handleMarkerRightClick(event) {
 
 // Function to generate popup content for editing feature properties
 function generateEditPopupContent(properties) {
-    let content = '<h3>Edit Marker</h3>';
+    const titleLabel = typeof t === 'function' ? t('popup.edit_marker', 'Edit Marker') : 'Edit Marker';
+    const nameLabel = typeof t === 'function' ? t('popup.name', 'Name:') : 'Name:';
+    const descLabel = typeof t === 'function' ? t('popup.description', 'Description:') : 'Description:';
+    let content = `<h3 data-i18n="popup.edit_marker">${titleLabel}</h3>`;
 
     // Ensure name input is always displayed
-    content += '<label for="name"><strong>Name:</strong></label><br>';
+    content += `<label for="name"><strong data-i18n="popup.name">${nameLabel}</strong></label><br>`;
     content += `<input type="text" class="form-control" id="name" value="${properties.name || ''}"><br>`;
 
     // Ensure description input is always displayed
-    content += '<br><label for="description"><strong>Description:</strong></label><br>';
+    content += `<br><label for="description"><strong data-i18n="popup.description">${descLabel}</strong></label><br>`;
     content += `<textarea class="form-control" type="text" id="description" rows="2" value="${properties.description || ''}"></textarea><br>`;
 
-    //content += '<button onclick="saveChanges()">Save</button>';
-    //return content;
     return `<div class="custom-popup-content">${content}</div>`;
 }
 
@@ -2284,9 +2755,9 @@ function handleActiveMarkerRightClick(event) {
         description: ""
     }); // Empty inputs for the new marker
 
-    // Style the button as a Bootstrap 5 button and center align it
+    const saveLabel = typeof t === 'function' ? t('popup.save', 'Save') : 'Save';
     content += '<div class="text-center">';
-    content += '<br><button type="button" id="saveActive" class="btn btn-primary" onclick="saveActiveMarker()">Save</button>';
+    content += `<br><button type="button" id="saveActive" class="btn btn-primary" data-i18n="popup.save" onclick="saveActiveMarker()">${saveLabel}</button>`;
     content += '</div>';
 
     menu.setContent(content);
@@ -2695,14 +3166,16 @@ function updateNavHud(data) {
     if (statusBadge) {
         if (data.paused) {
             statusBadge.className = 'badge badge-warning bg-warning';
-            statusBadge.textContent = '已暫停';
+            statusBadge.textContent = typeof t === 'function' ? t('hud.status_paused', '已暫停') : '已暫停';
         } else {
             statusBadge.className = 'badge badge-success bg-success';
-            statusBadge.textContent = '運行中';
+            statusBadge.textContent = typeof t === 'function' ? t('hud.status_running', '運行中') : '運行中';
         }
     }
     if (pauseBtn) {
-        pauseBtn.textContent = data.paused ? '繼續' : '暫停';
+        pauseBtn.textContent = data.paused
+            ? (typeof t === 'function' ? t('hud.resume', '繼續') : '繼續')
+            : (typeof t === 'function' ? t('hud.pause', '暫停') : '暫停');
         if (data.paused) {
             pauseBtn.classList.remove('btn-outline-warning');
             pauseBtn.classList.add('btn-outline-success');
@@ -2748,7 +3221,7 @@ function fetchNavigationStatus() {
                 }
                 clearNavRoute();
                 if (typeof displayToast === 'function') {
-                    displayToast("已到達目的地");
+                    displayToast(typeof t === 'function' ? t('toast.arrived', "已到達目的地") : "已到達目的地");
                 }
             } else {
                 // Stopped externally
@@ -2825,7 +3298,9 @@ function toggleNavPause() {
         const pauseBtn = document.getElementById('navPauseResumeBtn');
         const statusBadge = document.getElementById('navStatusBadge');
         if (pauseBtn) {
-            pauseBtn.textContent = window.navPaused ? '繼續' : '暫停';
+            pauseBtn.textContent = window.navPaused
+                ? (typeof t === 'function' ? t('hud.resume', '繼續') : '繼續')
+                : (typeof t === 'function' ? t('hud.pause', '暫停') : '暫停');
             if (window.navPaused) {
                 pauseBtn.classList.remove('btn-outline-warning');
                 pauseBtn.classList.add('btn-outline-success');
@@ -2835,7 +3310,9 @@ function toggleNavPause() {
             }
         }
         if (statusBadge) {
-            statusBadge.textContent = window.navPaused ? '已暫停' : '運行中';
+            statusBadge.textContent = window.navPaused
+                ? (typeof t === 'function' ? t('hud.status_paused', '已暫停') : '已暫停')
+                : (typeof t === 'function' ? t('hud.status_running', '運行中') : '運行中');
             statusBadge.className = window.navPaused ? 'badge badge-warning bg-warning' : 'badge badge-success bg-success';
         }
         return data;
@@ -2848,7 +3325,7 @@ function toggleNavPause() {
 function startNavigation(waypoints, speed) {
     if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
         if (typeof displayToast === 'function') {
-            displayToast("導航路徑至少需要2個座標點");
+            displayToast(typeof t === 'function' ? t('toast.waypoints_min_error', "導航路徑至少需要2個座標點") : "導航路徑至少需要2個座標點");
         }
         return Promise.reject(new Error("Waypoints must have at least 2 points"));
     }
@@ -2872,7 +3349,8 @@ function startNavigation(waypoints, speed) {
     .catch(err => {
         console.error('Error starting navigation:', err);
         if (typeof displayToast === 'function') {
-            displayToast("啟動導航失敗: " + err.message);
+            const prefix = typeof t === 'function' ? t('toast.nav_start_failed_prefix', "啟動導航失敗: ") : "啟動導航失敗: ";
+            displayToast(prefix + err.message);
         }
         throw err;
     });
@@ -2934,24 +3412,24 @@ function toggleAutoNavMode(forceState, suppressToast = false) {
     if (window.isAutoNavMode) {
         if (btn) {
             btn.classList.add('active');
-            btn.title = 'Auto Navigation (Active)';
+            btn.title = typeof t === 'function' ? t('map.auto_nav_active_title', 'Auto Navigation (Active)') : 'Auto Navigation (Active)';
         }
         if (mapContainer && mapContainer.style) {
             mapContainer.style.cursor = 'crosshair';
         }
         if (!suppressToast && typeof displayToast === 'function') {
-            displayToast("自動導航模式已開啟：請點擊地圖目的地出發");
+            displayToast(typeof t === 'function' ? t('toast.auto_nav_on', "自動導航模式已開啟：請點擊地圖目的地出發") : "自動導航模式已開啟：請點擊地圖目的地出發");
         }
     } else {
         if (btn) {
             btn.classList.remove('active');
-            btn.title = 'Auto Navigation';
+            btn.title = typeof t === 'function' ? t('map.auto_nav_title', 'Auto Navigation') : 'Auto Navigation';
         }
         if (mapContainer && mapContainer.style) {
             mapContainer.style.cursor = '';
         }
         if (!suppressToast && typeof displayToast === 'function') {
-            displayToast("自動導航模式已關閉");
+            displayToast(typeof t === 'function' ? t('toast.auto_nav_off', "自動導航模式已關閉") : "自動導航模式已關閉");
         }
     }
     return window.isAutoNavMode;
@@ -2964,10 +3442,10 @@ function setCameraLock(locked) {
     if (btn) {
         if (window.isCameraLocked) {
             btn.classList.add('active');
-            btn.title = 'Camera Tracking (Locked)';
+            btn.title = typeof t === 'function' ? t('map.camera_locked_title', 'Camera Tracking (Locked)') : 'Camera Tracking (Locked)';
         } else {
             btn.classList.remove('active');
-            btn.title = 'Camera Tracking (Unlocked)';
+            btn.title = typeof t === 'function' ? t('map.camera_unlocked_title', 'Camera Tracking (Unlocked)') : 'Camera Tracking (Unlocked)';
         }
     }
     return window.isCameraLocked;
@@ -3516,11 +3994,12 @@ function connectDevice() {
     var connectTextElement = document.getElementById('connectText');
     var spinnerElement = document.getElementById('spinner');
     var deviceDropdown = document.getElementById('device');
-    if (!deviceDropdown || !deviceDropdown.value) {
+    if (! deviceDropdown || !deviceDropdown.value) {
+        const msg = typeof t === 'function' ? t('toast.select_device_first', "請先選擇裝置。") : "請先選擇裝置。";
         if (typeof displayToast === 'function') {
-            displayToast("請先選擇裝置。");
+            displayToast(msg);
         } else if (typeof alert === 'function') {
-            alert("請先選擇裝置。");
+            alert(msg);
         }
         return;
     }
@@ -3562,8 +4041,9 @@ function connectDevice() {
 <!--    console.log('wifi address:', selectedDeviceWifiAddress);-->
 
 
+    window.connectionState = 'connecting';
     if (connectTextElement) {
-        connectTextElement.innerText = "連線中，請稍候…";
+        connectTextElement.innerText = typeof t === 'function' ? t('top.connecting', "連線中，請稍候…") : "連線中，請稍候…";
     }
     // Hide the connectText and show the spinner only if not already connected
     if (connectTextElement && spinnerElement && !isDeviceConnected()) {
@@ -3610,9 +4090,10 @@ function connectDevice() {
             //alert(data.error); // You can use a better UI method here
             showModalTimeout();
 
+            window.connectionState = 'disconnected';
             // Reset connectTextElement
             if (connectTextElement) {
-                connectTextElement.innerText = "🔗 連線裝置";
+                connectTextElement.innerText = typeof t === 'function' ? t('top.connect', "🔗 連線裝置") : "🔗 連線裝置";
                 spinnerElement.style.display = 'none'; // Display the spinner
             }
 
@@ -3631,8 +4112,9 @@ function connectDevice() {
             displayTextElement.innerText = data;
         }
 
+        window.connectionState = 'connected';
         if (connectTextElement) {
-            connectTextElement.innerText = "✅ 已連線";
+            connectTextElement.innerText = typeof t === 'function' ? t('top.connected', "✅ 已連線") : "✅ 已連線";
         }
 
         if (connectButton) {
@@ -3668,7 +4150,7 @@ function connectDevice() {
                             var disconnectButton = document.getElementById('disconnect');
                             if (disconnectButton) {
                                 disconnectButton.style.display = 'inline-block';
-                                disconnectButton.innerText = '🔌 中斷連線';
+                                disconnectButton.innerText = typeof t === 'function' ? t('top.disconnect', '🔌 中斷連線') : '🔌 中斷連線';
                             }
                         }
                     } else {
@@ -3689,8 +4171,9 @@ function connectDevice() {
                 displayTextElement.innerText = 'Error connecting device.';
             }
 
+            window.connectionState = 'failed';
             if (connectTextElement) {
-                connectTextElement.innerText = "連線失敗";
+                connectTextElement.innerText = typeof t === 'function' ? t('top.connect_failed', "連線失敗") : "連線失敗";
             }
 
             if (connectButton) {
@@ -3739,7 +4222,7 @@ function showModalWifiModeRequired() {
 
         // Update Disconnect button text and show Connect button
         if (disconnectButton) {
-            disconnectButton.innerText = "🔌 中斷連線";
+            disconnectButton.innerText = typeof t === 'function' ? t('top.disconnect', "🔌 中斷連線") : "🔌 中斷連線";
             disconnectButton.style.display = 'none';
         }
 
@@ -3749,9 +4232,10 @@ function showModalWifiModeRequired() {
             rsdDataElement.style.display = 'none';
         }
 
+        window.connectionState = 'disconnected';
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "🔗 連線裝置";
+            connectTextElement.innerText = typeof t === 'function' ? t('top.connect', "🔗 連線裝置") : "🔗 連線裝置";
         }
 
         // Enable Connect button
@@ -3786,7 +4270,9 @@ function setLocationArrows() {
             })
             .catch(error => {
                 console.error('Error setting location:', error);
-                displayToast(`Location failed: ${error.message}`);
+                const prefix = typeof t === 'function' ? t('toast.location_failed_prefix', 'Location failed: ') : 'Location failed: ';
+                const detail = typeof translateBackendMessage === 'function' ? translateBackendMessage(error.message) : error.message;
+                displayToast(`${prefix}${detail}`);
             });
     }
 
@@ -3814,7 +4300,9 @@ function setLocationArrows() {
             })
             .catch(error => {
                 console.error('Error setting location:', error);
-                displayToast(`Location failed: ${error.message}`);
+                const prefix = typeof t === 'function' ? t('toast.location_failed_prefix', 'Location failed: ') : 'Location failed: ';
+                const detail = typeof translateBackendMessage === 'function' ? translateBackendMessage(error.message) : error.message;
+                displayToast(`${prefix}${detail}`);
             });
     }
 
@@ -3841,7 +4329,9 @@ function setLocationArrows() {
             })
             .catch(error => {
                 console.error('Error stopping location:', error);
-                displayToast(`Stop location failed: ${error.message}`);
+                const prefix = typeof t === 'function' ? t('toast.stop_location_failed_prefix', 'Stop location failed: ') : 'Stop location failed: ';
+                const detail = typeof translateBackendMessage === 'function' ? translateBackendMessage(error.message) : error.message;
+                displayToast(`${prefix}${detail}`);
             });
     }
 
@@ -3916,18 +4406,24 @@ function setLocationArrows() {
       toast.setAttribute('aria-live', 'assertive');
       toast.setAttribute('aria-atomic', 'true');
 
+      const brandTitle = typeof t === 'function' ? t('brand.title', '🌸 花徑漫步') : '🌸 花徑漫步';
+      const justNow = typeof t === 'function' ? t('toast.just_now', '剛剛') : '剛剛';
+      const localizedMsg = typeof translateBackendMessage === 'function' ? translateBackendMessage(message) : message;
+
       // Set up the toast content
       toast.innerHTML = `
         <div class="toast-header">
-          <strong class="me-auto">🌸 花徑漫步</strong>
-          <small>剛剛</small>
+          <strong class="me-auto" data-i18n="brand.title">${brandTitle}</strong>
+          <small data-i18n="toast.just_now">${justNow}</small>
           <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body">
         </div>
       `;
 
-      toast.querySelector('.toast-body').textContent = message;
+      const bodyEl = toast.querySelector('.toast-body');
+      bodyEl.setAttribute('data-raw-msg', String(message));
+      bodyEl.textContent = localizedMsg;
 
       // Append the toast to the toast container
       document.querySelector('.toast-container').appendChild(toast);
@@ -3947,8 +4443,9 @@ function continueAfterDeveloperModeRequired() {
     var spinnerElement = document.getElementById('spinner');
     console.log('Enabling Developer Mode on: ', selectedDeviceIdentifier);
 
+    window.connectionState = 'enabling_dev_mode';
     if (connectTextElement) {
-        connectTextElement.innerText = "正在啟用開發者模式…";
+        connectTextElement.innerText = typeof t === 'function' ? t('top.enabling_dev_mode', "正在啟用開發者模式…") : "正在啟用開發者模式…";
         spinnerElement.style.display = 'inline-block'; // Show the spinner
     }
 
@@ -3978,7 +4475,7 @@ function continueAfterDeveloperModeRequired() {
         console.error('Error enabling developer mode:', error);
         // Handle the error, e.g., display an alert or take appropriate action
         //alert('Error enabling developer mode.');
-        showAlertOrModal('啟用開發者模式時發生錯誤。');
+        showAlertOrModal(typeof t === 'function' ? t('toast.enable_dev_mode_error', '啟用開發者模式時發生錯誤。') : '啟用開發者模式時發生錯誤。');
     });
 }
 
@@ -3992,9 +4489,10 @@ function continueAfterDeveloperModeRequired() {
         var connectTextElement = document.getElementById('connectText');
         var spinnerElement = document.getElementById('spinner');
         // Perform any actions needed to cancel after developer mode is required
+        window.connectionState = 'disconnected';
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "🔗 連線裝置";
+            connectTextElement.innerText = typeof t === 'function' ? t('top.connect', "🔗 連線裝置") : "🔗 連線裝置";
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
@@ -4014,21 +4512,23 @@ function continueAfterDeveloperModeRequired() {
         var connectTextElement = document.getElementById('connectText');
         var spinnerElement = document.getElementById('spinner');
         // Perform any actions needed to cancel after developer mode is required
+        window.connectionState = 'disconnected';
         // Reset connectTextElement
         if (connectTextElement) {
-            connectTextElement.innerText = "🔗 連線裝置";
+            connectTextElement.innerText = typeof t === 'function' ? t('top.connect', "🔗 連線裝置") : "🔗 連線裝置";
             spinnerElement.style.display = 'none'; // Hide the spinner
         }
 
+        const localizedError = typeof translateBackendMessage === 'function' ? translateBackendMessage(errorMessage) : errorMessage;
         var developerErrorModal = document.getElementById('developerError');
         if (developerErrorModal) {
             // Set the error message in the modal
-            document.getElementById('developerErrorMessage').innerText = errorMessage;
+            document.getElementById('developerErrorMessage').innerText = localizedError;
             // Show the modal
             $('#developerError').modal('show');
         } else {
             // Fallback to alert if modal element doesn't exist
-            alert(errorMessage);
+            alert(localizedError);
         }
     }
 
@@ -4037,6 +4537,9 @@ function continueAfterDeveloperModeRequired() {
 
     document.addEventListener('DOMContentLoaded', function () {
     console.log("test");
+    if (typeof initLocale === 'function') {
+        initLocale();
+    }
     initializeMap();
     document.getElementById('rsdData').addEventListener('change', updateSetLocationButtonStatus);
     document.getElementById('coordinates').addEventListener('input', updateSetLocationButtonStatus);
@@ -4074,10 +4577,10 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="shutdownModalLabel">伺服器已關閉</h5>
+                <h5 class="modal-title" id="shutdownModalLabel" data-i18n="modal.shutdown.title">伺服器已關閉</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center py-4">
+            <div class="modal-body text-center py-4" data-i18n="modal.shutdown.body">
                 感謝您的使用，祝您散步愉快！🌸
             </div>
         </div>
@@ -4088,16 +4591,16 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="devModalLabel">需要開發者模式</h5>
+                <h5 class="modal-title" id="devModalLabel" data-i18n="modal.dev_passcode.title">需要開發者模式</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>裝置已設定螢幕鎖定密碼。</p>
-                <p>啟用「開發者模式」時無法處於設有密碼狀態，請先暫時關閉裝置密碼後再嘗試連線。</p>
-                <p class="text-muted mb-0"><small>註：開啟開發者模式通常只需設定一次。</small></p>
+                <p data-i18n="modal.dev_passcode.p1">裝置已設定螢幕鎖定密碼。</p>
+                <p data-i18n="modal.dev_passcode.p2">啟用「開發者模式」時無法處於設有密碼狀態，請先暫時關閉裝置密碼後再嘗試連線。</p>
+                <p class="text-muted mb-0"><small data-i18n="modal.dev_passcode.note">註：開啟開發者模式通常只需設定一次。</small></p>
             </div>
             <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">好</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" data-i18n="modal.common.ok" onclick="window.location.href = '/'">好</button>
             </div>
         </div>
     </div>
@@ -4107,15 +4610,15 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="pairRecordModalLabel">無配對紀錄</h5>
+                <h5 class="modal-title" id="pairRecordModalLabel" data-i18n="modal.pair_record.title">無配對紀錄</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <p>找不到此裝置的配對信任紀錄。</p>
-                <p class="mb-0">請先使用 USB 傳輸線連接電腦與裝置以建立配對信任。</p>
+                <p data-i18n="modal.pair_record.p1">找不到此裝置的配對信任紀錄。</p>
+                <p class="mb-0" data-i18n="modal.pair_record.p2">請先使用 USB 傳輸線連接電腦與裝置以建立配對信任。</p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">好</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" data-i18n="modal.common.ok" onclick="window.location.href = '/'">好</button>
             </div>
         </div>
     </div>
@@ -4125,17 +4628,17 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="developerModeRequiredModalLabel">需要啟用開發者模式</h5>
+                <h5 class="modal-title" id="developerModeRequiredModalLabel" data-i18n="modal.dev_required.title">需要啟用開發者模式</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <p>裝置尚未啟用開發者模式。</p>
-                <p>「🌸 花徑漫步」將嘗試為您的裝置啟用開發者模式，過程中裝置將會自動重新開機。</p>
-                <p class="mb-0">點擊「確定」繼續，或點擊「取消」返回。</p>
+                <p data-i18n="modal.dev_required.p1">裝置尚未啟用開發者模式。</p>
+                <p data-i18n="modal.dev_required.p2">「🌸 花徑漫步」將嘗試為您的裝置啟用開發者模式，過程中裝置將會自動重新開機。</p>
+                <p class="mb-0" data-i18n="modal.dev_required.p3">點擊「確定」繼續，或點擊「取消」返回。</p>
             </div>
             <div class="modal-footer justify-content-center gap-2">
-                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="continueAfterDeveloperModeRequired()">確定</button>
-                <button type="button" class="btn btn-bento-outline px-4" data-bs-dismiss="modal" onclick="cancelAfterDeveloperModeRequired()">取消</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" data-i18n="modal.common.confirm" onclick="continueAfterDeveloperModeRequired()">確定</button>
+                <button type="button" class="btn btn-bento-outline px-4" data-bs-dismiss="modal" data-i18n="modal.common.cancel" onclick="cancelAfterDeveloperModeRequired()">取消</button>
             </div>
         </div>
     </div>
@@ -4145,15 +4648,15 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalTimeoutLabel">連線逾時</h5>
+                <h5 class="modal-title" id="modalTimeoutLabel" data-i18n="modal.timeout.title">連線逾時</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <p>無法在 60 秒內建立裝置通道。</p>
-                <p class="mb-0">請檢查裝置解鎖狀態與連接線，並重新嘗試連線。</p>
+                <p data-i18n="modal.timeout.p1">無法在 60 秒內建立裝置通道。</p>
+                <p class="mb-0" data-i18n="modal.timeout.p2">請檢查裝置解鎖狀態與連接線，並重新嘗試連線。</p>
             </div>
             <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">關閉</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" data-i18n="modal.common.close" onclick="window.location.href = '/'">關閉</button>
             </div>
         </div>
     </div>
@@ -4163,14 +4666,14 @@ function continueAfterDeveloperModeRequired() {
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="developerErrorLabel">開發者錯誤</h5>
+                <h5 class="modal-title" id="developerErrorLabel" data-i18n="modal.dev_error.title">開發者錯誤</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
                 <p id="developerErrorMessage"></p>
             </div>
             <div class="modal-footer d-flex justify-content-center">
-                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" onclick="window.location.href = '/'">關閉</button>
+                <button type="button" class="btn btn-bento-primary px-4" data-bs-dismiss="modal" data-i18n="modal.common.close" onclick="window.location.href = '/'">關閉</button>
             </div>
         </div>
     </div>
@@ -4179,8 +4682,8 @@ function continueAfterDeveloperModeRequired() {
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
   <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
-      <strong class="me-auto">🌸 花徑漫步</strong>
-      <small>剛剛</small>
+      <strong class="me-auto" data-i18n="brand.title">🌸 花徑漫步</strong>
+      <small data-i18n="toast.just_now">剛剛</small>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
     <div class="toast-body">
