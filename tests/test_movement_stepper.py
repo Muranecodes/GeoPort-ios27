@@ -16,7 +16,7 @@ from geometry import (
     CARDINAL_BEARINGS,
     EARTH_RADIUS_METERS,
 )
-from location_sink import LocationSink, MockLocationSink, DvtLocationSink
+from location_sink import DeviceSessionContext, LocationSink, MockLocationSink, DvtLocationSink
 import main
 
 
@@ -145,29 +145,141 @@ class TestLocationSink(unittest.TestCase):
         self.assertEqual(sink.locations, [])
         self.assertFalse(sink.cleared)
 
-    def test_dvt_location_sink_delegation(self):
+    def test_dvt_location_sink_persistent_rsd_streaming_and_in_session_clear(self):
+        from contextlib import asynccontextmanager
+
+        sessions_opened = []
         dispatched = []
         cleared = []
 
+        class FakeSim:
+            def set(self, lat, lng):
+                dispatched.append((lat, lng))
+
+            def clear(self):
+                cleared.append("in-stream-clear")
+
+        @asynccontextmanager
+        async def fake_session_factory(ctx):
+            sessions_opened.append(ctx.udid)
+            yield FakeSim()
+
+        ctx = DeviceSessionContext(
+            udid="udid-17",
+            ios_version="17.4",
+            connection_type="usb",
+            rsd_host="fd00::1",
+            rsd_port=58783,
+            has_rsd_session=True,
+        )
         sink = DvtLocationSink(
-            dispatch_fn=lambda lat, lng: dispatched.append((lat, lng)),
-            clear_fn=lambda: cleared.append(True)
+            context_provider=lambda: ctx,
+            simulation_session_factory=fake_session_factory,
         )
 
+        # Multiple set_location calls reuse a single persistent DVT session
         sink.set_location(37.7749, -122.4194)
-        self.assertEqual(dispatched, [(37.7749, -122.4194)])
+        sink.set_location(37.7750, -122.4195)
+        self.assertEqual(sessions_opened, ["udid-17"])
+        self.assertEqual(dispatched, [(37.7749, -122.4194), (37.7750, -122.4195)])
 
+        # clear_location clears on the already-open stream session without opening a 2nd session
         sink.clear_location()
-        self.assertEqual(cleared, [True])
+        self.assertEqual(sessions_opened, ["udid-17"])
+        self.assertEqual(cleared, ["in-stream-clear"])
 
-    def test_dvt_location_sink_session_queue(self):
-        import queue
-        q = queue.Queue()
-        sink = DvtLocationSink(session_queue=q)
-        self.assertIs(sink.session_queue, q)
+    def test_dvt_location_sink_switches_session_when_device_changes_and_supports_legacy_lockdown(self):
+        from contextlib import asynccontextmanager
 
+        events = []
+        active_ctx = [
+            DeviceSessionContext(
+                udid="legacy-16",
+                ios_version="16.6",
+                connection_type="usb",
+                lockdown=object(),
+                has_rsd_session=True,
+            )
+        ]
+
+        class FakeSim:
+            def __init__(self, udid):
+                self.udid = udid
+
+            def set(self, lat, lng):
+                events.append(("set", self.udid, lat, lng))
+
+            def clear(self):
+                events.append(("clear", self.udid))
+
+        @asynccontextmanager
+        async def fake_session_factory(ctx):
+            events.append(("open", ctx.udid))
+            yield FakeSim(ctx.udid)
+
+        sink = DvtLocationSink(
+            context_provider=lambda: active_ctx[0],
+            image_mounter=lambda: events.append(("mount", active_ctx[0].udid)),
+            simulation_session_factory=fake_session_factory,
+        )
+
+        sink.set_location(25.0330, 121.5654)
+        # iOS <17 mounts developer image, opens session, clears prior state, then sets location
+        self.assertEqual(
+            events,
+            [
+                ("mount", "legacy-16"),
+                ("open", "legacy-16"),
+                ("clear", "legacy-16"),
+                ("set", "legacy-16", 25.0330, 121.5654),
+            ],
+        )
+
+        # Switching to an iOS 18 device restarts the session automatically
+        active_ctx[0] = DeviceSessionContext(
+            udid="modern-18",
+            ios_version="18.1",
+            connection_type="usb",
+            rsd_host="fd00::2",
+            rsd_port=59999,
+            has_rsd_session=True,
+        )
         sink.set_location(35.6895, 139.6917)
-        self.assertEqual(q.get_nowait(), (35.6895, 139.6917))
+        self.assertIn(("open", "modern-18"), events)
+        self.assertIn(("set", "modern-18", 35.6895, 139.6917), events)
+        sink.clear_location()
+
+    def test_dvt_location_sink_routes_ios_27_to_modern_controller(self):
+        calls = []
+
+        class FakeModernController:
+            enabled = True
+
+            def set(self, udid, lat, lng):
+                calls.append(("modern_set", udid, lat, lng))
+
+            def clear(self, udid):
+                calls.append(("modern_clear", udid))
+
+        ctx = DeviceSessionContext(
+            udid="ios27-device",
+            ios_version="27.0",
+            connection_type="usb",
+        )
+        sink = DvtLocationSink(
+            context_provider=lambda: ctx,
+            modern_controller=FakeModernController(),
+        )
+
+        sink.set_location(25.0, 121.0)
+        sink.clear_location()
+        self.assertEqual(
+            calls,
+            [
+                ("modern_set", "ios27-device", 25.0, 121.0),
+                ("modern_clear", "ios27-device"),
+            ],
+        )
 
     def test_location_sink_has_no_circular_import_with_main(self):
         import location_sink
@@ -326,16 +438,25 @@ class TestMoveStepEndpoint(unittest.TestCase):
 
     def test_set_location_dvt_without_ios_version_returns_400(self):
         self.ctrl.set_location_coords(35.6762, 139.6503)
-        dvt_sink = DvtLocationSink()
+        dvt_sink = DvtLocationSink(
+            context_provider=lambda: DeviceSessionContext(ios_version=None)
+        )
         main.set_location_sink(dvt_sink)
-        orig_ios = main.ios_version
-        try:
-            main.ios_version = None
-            response = self.client.post("/set_location")
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.get_json(), {'error': 'No iOS version present'})
-        finally:
-            main.ios_version = orig_ios
+        response = self.client.post("/set_location")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json(), {'error': 'No iOS version present'})
+
+    def test_stop_location_halts_active_navigation_and_clears_sink(self):
+        self.ctrl.set_location_coords(25.0330, 121.5654)
+        self.ctrl.start([[25.0330, 121.5654], [25.0350, 121.5654]], speed_kmh=10.0)
+        self.assertTrue(self.ctrl.active)
+        self.assertFalse(self.mock_sink.cleared)
+
+        response = self.client.post("/stop_location")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(as_text=True), 'Location cleared successfully')
+        self.assertFalse(self.ctrl.active)
+        self.assertTrue(self.mock_sink.cleared)
 
     def test_update_location_success(self):
         response = self.client.post("/update_location", json={"lat": 37.7749, "lng": -122.4194})

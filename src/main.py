@@ -53,7 +53,13 @@ from pymobiledevice3.lockdown import LockdownClient
 from pymobiledevice3.lockdown_service_provider import LockdownServiceProvider
 from pymobiledevice3.remote.common import TunnelProtocol
 from modern_location_client import ModernLocationController
-from location_sink import LocationSink, DvtLocationSink, MockLocationSink
+from location_sink import (
+    DeviceSessionContext,
+    LocationSink,
+    DvtLocationSink,
+    MockLocationSink,
+    is_major_version_17_or_greater,
+)
 from navigation_engine import NavigationController
 
 #========= Arg Parser ========
@@ -129,7 +135,6 @@ sudo_message = ""
 captured_output = None
 APP_VERSION_NUMBER = "2.3.3"
 terminate_tunnel_thread = False
-location_stop_event = None
 timeout = DEFAULT_BONJOUR_TIMEOUT
 bundled_bridge = (Path(sys.executable).resolve().parents[1] / 'Resources' /
                   'modern-location-bridge') if getattr(sys, 'frozen', False) else None
@@ -304,15 +309,6 @@ async def start_tcp_tunnel(service_provider: CoreDeviceTunnelProxy) -> None:
 
 
 
-
-def is_major_version_17_or_greater(version_string):
-    # Check if the major version in the given version string is 17 or greater.
-    try:
-        major_version = int(version_string.split('.')[0])
-        return major_version >= 17
-    except (ValueError, IndexError):
-        # Handle invalid version string or missing major version
-        return False
 
 def is_major_version_less_than_16(version_string):
     # Check if the major version in the given version string is 17 or greater.
@@ -931,191 +927,31 @@ def mount_developer_image():
         error_message = str(e)
         return jsonify({'error': error_message})
 
-async def set_location_thread(latitude, longitude, coord_queue, report_success, stop_event):
-    try:
-        global rsd_host, rsd_port, udid, ios_version, connection_type
-
-        if udid in rsd_data_map:
-            if connection_type in rsd_data_map[udid]:
-                rsd_data = rsd_data_map[udid][connection_type]
-                rsd_host = rsd_data['host']
-                rsd_port = rsd_data['port']
-
-                logger.info(f"RSD in udid mapping is: {rsd_data}")
-                logger.info("RSD already created. Reusing connection")
-                logger.info(f"RSD Data: {rsd_data}")
-
-
-                if ios_version is not None and is_major_version_17_or_greater(ios_version):
-                    if not rsd_host or not rsd_port:
-                        raise RuntimeError("RSD tunnel is not ready")
-                    async with RemoteServiceDiscoveryService((rsd_host, rsd_port)) as sp_rsd:
-                        with DvtSecureSocketProxyService(sp_rsd) as dvt:
-                            sim = LocationSimulation(dvt)
-                            sim.set(latitude, longitude)
-                            report_success()
-                            logger.warning("LocationSimulation accepted the set call")
-                            while not stop_event.is_set():
-                                try:
-                                    item = coord_queue.get_nowait()
-                                except queue.Empty:
-                                    item = None
-                                if item is not None:
-                                    coords, ack_queue = item
-                                    try:
-                                        sim.set(coords[0], coords[1])
-                                        logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
-                                        if ack_queue is not None:
-                                            ack_queue.put_nowait(None)
-                                    except Exception as exc:
-                                        logger.exception("Error in persistent DVT stream update")
-                                        if ack_queue is not None:
-                                            ack_queue.put_nowait(exc)
-                                        raise
-                                await asyncio.sleep(0.05)
-
-
-                elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
-                    with DvtSecureSocketProxyService(lockdown=lockdown) as dvt:
-                        sim = LocationSimulation(dvt)
-                        sim.clear()
-                        sim.set(latitude, longitude)
-                        report_success()
-                        logger.warning("LocationSimulation accepted the set call")
-                        while not stop_event.is_set():
-                            try:
-                                item = coord_queue.get_nowait()
-                            except queue.Empty:
-                                item = None
-                            if item is not None:
-                                coords, ack_queue = item
-                                try:
-                                    sim.set(coords[0], coords[1])
-                                    logger.debug("Persistent DVT streamed location to (%s, %s)", coords[0], coords[1])
-                                    if ack_queue is not None:
-                                        ack_queue.put_nowait(None)
-                                except Exception as exc:
-                                    logger.exception("Error in persistent DVT stream update")
-                                    if ack_queue is not None:
-                                        ack_queue.put_nowait(exc)
-                                    raise
-                            await asyncio.sleep(0.05)
-                else:
-                    raise RuntimeError("Device iOS version is unavailable")
-
-                await asyncio.sleep(1)  # Adjust sleep time according to your requirements
-            else:
-                raise RuntimeError("Selected connection has no RSD session")
-        else:
-            raise RuntimeError("Selected device has no RSD session")
-
-    except asyncio.CancelledError:
-        raise
-    except ConnectionResetError as cre:
-        if "[Errno 54] Connection reset by peer" in str(cre):
-            logger.error("The Set Location buffer is full. Try to 'Stop Location' to clear old connections")
-        raise
-    except Exception as e:
-        logger.exception("Error setting location")
-        raise
-
-
-_dvt_thread = None
-_dvt_coord_queue = None
-
-
-# Function to start or stream to the set_location_thread
-def start_set_location_thread(latitude, longitude):
-    global location_stop_event, _dvt_thread, _dvt_coord_queue
-    # Reuse active persistent DVT session if healthy
-    if (
-        _dvt_thread is not None
-        and _dvt_thread.is_alive()
-        and location_stop_event is not None
-        and not location_stop_event.is_set()
-        and _dvt_coord_queue is not None
-    ):
-        ack = queue.Queue(maxsize=1)
-        _dvt_coord_queue.put(((latitude, longitude), ack))
-        try:
-            failure = ack.get(timeout=5.0)
-            if failure is None:
-                return
-            logger.warning("Active DVT session coordinate update failed: %s; restarting session", failure)
-        except queue.Empty:
-            logger.warning("Active DVT session update timed out; restarting session")
-
-    # Stop existing threads
-    stop_set_location_thread()
-    stop_event = threading.Event()
-    location_stop_event = stop_event
-    _dvt_coord_queue = queue.Queue()
-    result = queue.Queue(maxsize=1)
-
-    # The HTTP request waits until the actual DVT call completes or fails.
-    async def run_async_function():
-        await set_location_thread(
-            latitude,
-            longitude,
-            _dvt_coord_queue,
-            lambda: result.put_nowait(None),
-            stop_event,
-        )
-
-    # Create a new thread and start it
-    def run_location_worker():
-        try:
-            asyncio.run(run_async_function())
-        except Exception as exc:
-            if result.empty():
-                result.put_nowait(exc)
-        finally:
-            global _dvt_coord_queue
-            _dvt_coord_queue = None
-
-    location_thread = threading.Thread(target=run_location_worker, daemon=True)
-    _dvt_thread = location_thread
-    location_thread.start()
-
-    try:
-        failure = result.get(timeout=30)
-    except queue.Empty as exc:
-        stop_event.set()
-        raise TimeoutError("LocationSimulation did not respond within 30 seconds") from exc
-    if failure is not None:
-        raise failure
-
-
-# Function to stop the location thread
-def stop_set_location_thread():
-    global location_stop_event, _dvt_thread, _dvt_coord_queue
-    if location_stop_event is not None:
-        location_stop_event.set()
-        location_stop_event = None
-    if _dvt_thread is not None and _dvt_thread.is_alive():
-        if threading.current_thread() != _dvt_thread:
-            _dvt_thread.join(timeout=1.0)
-        _dvt_thread = None
-    _dvt_coord_queue = None
-
-
-def dispatch_dvt_location(latitude: float, longitude: float):
-    global ios_version, udid, lockdown
-    if ios_version is not None and is_major_version_17_or_greater(ios_version):
-        if modern_location.enabled and ios_version.startswith('27.'):
-            modern_location.set(udid, latitude, longitude)
-            return
-        start_set_location_thread(latitude, longitude)
-    elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
-        mount_developer_image()
-        start_set_location_thread(latitude, longitude)
-    else:
-        raise RuntimeError("No iOS version present")
+def get_device_session_context() -> DeviceSessionContext:
+    global rsd_data, rsd_host, rsd_port, rsd_data_map, udid, connection_type, ios_version, lockdown
+    has_rsd = False
+    host = rsd_host
+    port = rsd_port
+    if udid in rsd_data_map and connection_type in rsd_data_map[udid]:
+        has_rsd = True
+        rsd_data = rsd_data_map[udid][connection_type]
+        host = rsd_data.get('host')
+        port = rsd_data.get('port')
+    return DeviceSessionContext(
+        udid=udid,
+        ios_version=ios_version,
+        connection_type=connection_type,
+        rsd_host=host,
+        rsd_port=int(port) if port is not None else None,
+        lockdown=lockdown,
+        has_rsd_session=has_rsd,
+    )
 
 
 current_location_sink: LocationSink = DvtLocationSink(
-    dispatch_fn=dispatch_dvt_location,
-    clear_fn=stop_set_location_thread,
+    context_provider=get_device_session_context,
+    modern_controller=modern_location,
+    image_mounter=mount_developer_image,
 )
 
 
@@ -1262,21 +1098,11 @@ def navigation_status():
 @app.route('/set_location', methods=['POST'])
 def set_location():
     try:
-        global rsd_data, rsd_host, rsd_port
-        global udid, connection_type
-        global ios_version
-
         ctrl = get_navigation_controller()
-        if not ctrl.has_location:
-            return jsonify({'error': 'Location is not set'}), 400
-
-        sink = get_location_sink()
-        if isinstance(sink, DvtLocationSink) and ios_version is None:
-            return jsonify({'error': 'No iOS version present'}), 400
-
         ctrl.dispatch_current_location()
         return 'DVT set call completed; check the phone location'
-
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
     except Exception as e:
         error_message = str(e)
         return jsonify({'error': error_message}), 500
@@ -1317,51 +1143,14 @@ def move_step():
 
 @app.route('/stop_location', methods=['POST'])
 def stop_location():
-    global ios_version, udid, connection_type
     try:
-        stop_set_location_thread()
-        if modern_location.enabled and ios_version and ios_version.startswith('27.'):
-            modern_location.clear(udid)
-            return 'Location cleared successfully'
-        return asyncio.run(stop_legacy_location())
+        ctrl = get_navigation_controller()
+        ctrl.clear_location()
+        return 'Location cleared successfully'
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-async def stop_legacy_location():
-    global ios_version, udid, connection_type
-    try:
-        global rsd_data
-        global rsd_host
-        global rsd_port
-        global lockdown
-        logger.info(f"stop set location data:  {rsd_data}")
-
-
-        if udid in rsd_data_map:
-            if connection_type in rsd_data_map[udid]:
-                rsd_data = rsd_data_map[udid][connection_type]
-
-                rsd_host = rsd_data['host']
-                rsd_port = rsd_data['port']
-
-            if ios_version is not None and is_major_version_17_or_greater(ios_version):
-                async with RemoteServiceDiscoveryService((rsd_host, rsd_port)) as sp_rsd:
-                    with DvtSecureSocketProxyService(sp_rsd) as dvt:
-                        LocationSimulation(dvt).clear()
-                        logger.warning("Location Cleared Successfully")
-                return 'Location cleared successfully'
-
-            elif ios_version is not None and not is_major_version_17_or_greater(ios_version):
-                with DvtSecureSocketProxyService(lockdown=lockdown) as dvt:
-
-                    LocationSimulation(dvt).clear()
-                    logger.warning("Location Cleared Successfully")
-                return 'Location cleared successfully'
-        return 'Location cleared successfully'
-    except Exception as e:
-        error_message = str(e)
-        return jsonify({'error': error_message}), 500
 
 
 
@@ -1520,7 +1309,6 @@ def clear_old_geoport():
 def shutdown_server():
     logger.warning("shutdown server")
     stop_location()
-    stop_set_location_thread()
     stop_tunnel_thread()
     cancel_async_tasks()
     terminate_threads()

@@ -137,16 +137,35 @@ class NavigationController:
         """
         Raises ValueError("Location is not set") if not has_location;
         otherwise dispatches (current_lat, current_lng) to LocationSink,
-        sets _last_dispatch_time = self._clock(), and returns (current_lat, current_lng).
+        propagating any sink errors, sets _last_dispatch_time = self._clock(),
+        and returns (current_lat, current_lng).
         """
         with self._lock:
             if not self.has_location:
                 raise ValueError("Location is not set")
             lat, lng = self.current_lat, self.current_lng
-            self._last_dispatch_time = self._clock()
 
-        self._dispatch(lat, lng)
+        target_sink = self.sink
+        if target_sink is not None:
+            try:
+                target_sink.set_location(lat, lng)
+            except Exception as e:
+                with self._lock:
+                    self._last_error = str(e)
+                raise
+
+        with self._lock:
+            self._last_dispatch_time = self._clock()
         return lat, lng
+
+    def clear_location(self) -> None:
+        """
+        Halts any active Auto Navigation and clears simulated coordinates via LocationSink.
+        """
+        self.stop()
+        target_sink = self.sink
+        if target_sink is not None:
+            target_sink.clear_location()
 
     def get_speed(self) -> float:
         """

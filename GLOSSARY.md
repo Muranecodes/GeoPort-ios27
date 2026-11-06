@@ -16,6 +16,10 @@ _Avoid_: iOS version, system version
 The act of injecting spoofed GPS latitude and longitude coordinates into an iOS device via developer debug services (DVT / pymobiledevice3).
 _Avoid_: Mocking, fake GPS, teleport (when referring to continuous movement)
 
+**Location Sink**:
+The target receiver that applies simulated GPS coordinates to a connected iOS device or restores its hardware GPS reading.
+_Avoid_: Location service, GPS wrapper, DVT callback
+
 **Auto Navigation**:
 Automated step-by-step movement along real pedestrian roads at a configured speed, interpolated at 1Hz by a server-side background worker.
 _Avoid_: Playback, teleport, route replay
